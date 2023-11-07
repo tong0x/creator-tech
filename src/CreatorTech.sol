@@ -12,7 +12,14 @@ contract CreatorTech is Ownable, ReentrancyGuard {
     uint256 public creatorTreasuryFee;
     uint256 public creatorFee;
 
-    constructor() Ownable(msg.sender) ReentrancyGuard() {}
+    constructor() Ownable(msg.sender) ReentrancyGuard() {
+        protocolFeeRecipient = msg.sender;
+        creatorTreasury = msg.sender;
+
+        protocolFee = 0.02 ether; // 2%
+        creatorTreasuryFee = 0.05 ether; // 5%
+        creatorFee = 0.03 ether; // 3%
+    }
 
     function setProtocolFeeRecipient(
         address _protocolFeeRecipient
