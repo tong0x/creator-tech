@@ -17,6 +17,10 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     mapping(uint64 => address) public creatorAddrs; // Twitter UUID to ETH address
     mapping(uint64 => mapping(uint256 => Bot)) public bots; // Twitter UUID => bot idx => bot
 
+    address[] public signers;
+    mapping(address => bool) public isSigner;
+    mapping(address => uint256) public signerIdx;
+
     address public protocolFeeRecipient;
     address public creatorTreasury;
 
@@ -24,17 +28,72 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     uint256 public creatorTreasuryFee;
     uint256 public creatorFee;
 
-    constructor()
-        Ownable(msg.sender)
-        ReentrancyGuard()
-        EIP712("CreatorTech", "1")
-    {
+    event SignerAdded(address indexed signer);
+    event SignerRemoved(address indexed signer);
+
+    constructor(
+        address[] memory _signers
+    ) Ownable(msg.sender) ReentrancyGuard() EIP712("CreatorTech", "1") {
+        for (uint256 i = 0; i < _signers.length; i++) {
+            addSigner(_signers[i]);
+        }
+
         protocolFeeRecipient = msg.sender;
         creatorTreasury = msg.sender;
 
         protocolFee = 0.02 ether; // 2%
         creatorTreasuryFee = 0.05 ether; // 5%
         creatorFee = 0.03 ether; // 3%
+    }
+
+    function addSigner(address _signer) public onlyOwner {
+        require(!isSigner[_signer], "Signer already exists");
+        isSigner[_signer] = true;
+        signerIdx[_signer] = signers.length;
+        signers.push(_signer);
+        emit SignerAdded(_signer);
+    }
+
+    function removeSigner(address _signer) external onlyOwner {
+        require(isSigner[_signer], "Signer does not exist");
+        uint256 idx = signerIdx[_signer];
+        uint256 lastIdx = signers.length - 1;
+
+        if (idx != lastIdx) {
+            address lastSigner = signers[lastIdx];
+            signers[idx] = lastSigner;
+            signerIdx[lastSigner] = idx;
+        }
+
+        delete isSigner[_signer];
+        delete signerIdx[_signer];
+        signers.pop();
+
+        emit SignerRemoved(_signer);
+    }
+
+    function recover(
+        bytes32 hash,
+        uint8[] calldata v,
+        bytes32[] calldata r,
+        bytes32[] calldata s
+    ) public view returns (bool) {
+        uint256 length = signers.length;
+        require(length > 0, "No signers");
+        require(
+            length == v.length && length == r.length && length == s.length,
+            "Invalid signature length"
+        );
+        address[] memory seen = new address[](length);
+        for (uint256 i = 0; i < length; i++) {
+            address signer = ecrecover(hash, v[i], r[i], s[i]);
+            require(isSigner[signer], "Invalid signer");
+            for (uint256 j = 0; j < i; j++) {
+                require(signer != seen[j], "Duplicate signer");
+            }
+            seen[i] = signer;
+        }
+        return true;
     }
 
     function setProtocolFeeRecipient(
