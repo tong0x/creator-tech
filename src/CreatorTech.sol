@@ -3,8 +3,9 @@ pragma solidity 0.8.22;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
-contract CreatorTech is Ownable, ReentrancyGuard {
+contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     // TODO: Add fields related to rewards
     struct Bot {
         uint64 owner; // Twitter UUID
@@ -23,7 +24,11 @@ contract CreatorTech is Ownable, ReentrancyGuard {
     uint256 public creatorTreasuryFee;
     uint256 public creatorFee;
 
-    constructor() Ownable(msg.sender) ReentrancyGuard() {
+    constructor()
+        Ownable(msg.sender)
+        ReentrancyGuard()
+        EIP712("CreatorTech", "1")
+    {
         protocolFeeRecipient = msg.sender;
         creatorTreasury = msg.sender;
 
