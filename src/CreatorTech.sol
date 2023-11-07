@@ -5,6 +5,17 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract CreatorTech is Ownable, ReentrancyGuard {
+    // TODO: Add fields related to rewards
+    struct Bot {
+        uint64 owner; // Twitter UUID
+        mapping(address => uint256) balanceOf; // trader => balance of keys
+        uint256 totalSupply; // of keys
+        uint256 unclaimedCreatorFees;
+    }
+
+    mapping(uint64 => address) public creatorAddrs; // Twitter UUID to ETH address
+    mapping(uint64 => mapping(uint256 => Bot)) public bots; // Twitter UUID => bot idx => bot
+
     address public protocolFeeRecipient;
     address public creatorTreasury;
 
