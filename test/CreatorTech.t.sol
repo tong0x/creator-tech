@@ -138,4 +138,38 @@ contract CreatorTechTest is Test {
         vm.expectRevert("Duplicate signer");
         creatorTech.recover(hash, v, r, s);
     }
+
+    // Copied from Tomo
+    function getPriceTomo(
+        uint256 supply,
+        uint256 amount
+    ) public pure returns (uint256) {
+        uint256 sum1 = (supply * (supply + 1) * (2 * supply + 1)) / 6;
+        uint256 sum2 = ((supply + amount) *
+            (supply + 1 + amount) *
+            (2 * (supply + amount) + 1)) / 6;
+        uint256 summation = sum2 - sum1;
+        return (summation * 1 ether) / 43370;
+    }
+
+    function testGetKeyPrice_Equivalence(
+        uint256 currentSupply,
+        uint256 keyAmount
+    ) public {
+        if (keyAmount == 0) {
+            return;
+        }
+        // Let's use 1B keys as cut off
+        if (currentSupply > 1_000_000_000 || keyAmount > 1_000_000_000) {
+            return;
+        }
+
+        address[] memory signers = new address[](1);
+        signers[0] = address(0x1);
+        CreatorTech creatorTech = new CreatorTech(signers);
+        assertEq(
+            creatorTech.getKeyPrice(currentSupply, keyAmount),
+            getPriceTomo(currentSupply, keyAmount)
+        );
+    }
 }
