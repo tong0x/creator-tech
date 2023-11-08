@@ -120,16 +120,16 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         creatorFee = _creatorFee;
     }
 
-    function sumOfSquares(uint256 n) internal pure returns (uint256) {
-        return (n == 0) ? 0 : (n * (n + 1) * (2 * n + 1)) / 6;
+    function _sumOfSquares(uint256 _n) internal pure returns (uint256) {
+        return (_n == 0) ? 0 : (_n * (_n + 1) * (2 * _n + 1)) / 6;
     }
 
     function getKeyPrice(
-        uint256 currentSupply,
-        uint256 keyAmount
+        uint256 _currentSupply,
+        uint256 _keyAmount
     ) public pure returns (uint256) {
-        uint256 preTradeSum = sumOfSquares(currentSupply);
-        uint256 postTradeSum = sumOfSquares(currentSupply + keyAmount);
+        uint256 preTradeSum = _sumOfSquares(_currentSupply);
+        uint256 postTradeSum = _sumOfSquares(_currentSupply + _keyAmount);
         uint256 diffSum = postTradeSum - preTradeSum;
         return (diffSum * 1 ether) / 43370;
     }
