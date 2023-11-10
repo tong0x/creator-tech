@@ -8,14 +8,20 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     // TODO: Add fields related to rewards
     struct Bot {
-        uint64 owner; // Twitter UUID
+        uint64 creatorId; // Twitter UUID
         mapping(address => uint256) balanceOf; // trader => balance of keys
         uint256 totalSupply; // of keys
-        uint256 unclaimedCreatorFees;
     }
+
+    bytes32 public constant BIND_TYPEHASH =
+        keccak256(
+            abi.encodePacked("Bind(uint64 creatorId,address creatorAddr)")
+        );
 
     mapping(uint64 => address) public creatorAddrs; // Twitter UUID to ETH address
     mapping(uint64 => mapping(uint256 => Bot)) public bots; // Twitter UUID => bot idx => bot
+
+    mapping(uint64 => uint256) public unclaimedCreatorFees;
 
     address[] public signers;
     mapping(address => bool) public isSigner;
@@ -30,6 +36,17 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
     event SignerAdded(address indexed signer);
     event SignerRemoved(address indexed signer);
+    event CreatorBound(
+        uint64 indexed creatorId,
+        address creatorAddr,
+        uint256 timestamp
+    );
+    event RewardClaimed(
+        address indexed creatorAddr,
+        uint256 timestamp,
+        uint256 claimIdx,
+        uint256 amount
+    );
 
     constructor(
         address[] memory _signers
@@ -132,5 +149,37 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         uint256 postTradeSum = _sumOfSquares(_currentSupply + _keyAmount);
         uint256 diffSum = postTradeSum - preTradeSum;
         return (diffSum * 1 ether) / 43370;
+    }
+
+    function _buildBindSeparator(
+        uint64 _creatorId,
+        address _creatorAddr
+    ) internal view returns (bytes32) {
+        return
+            _hashTypedDataV4(
+                keccak256(abi.encode(BIND_TYPEHASH, _creatorId, _creatorAddr))
+            );
+    }
+
+    function bindCreatorAndClaim(
+        uint64 _creatorId,
+        address _creatorAddr,
+        uint8[] calldata _v,
+        bytes32[] calldata _r,
+        bytes32[] calldata _s
+    ) external nonReentrant {
+        require(_creatorAddr != address(0), "Invalid creator address");
+        recover(_buildBindSeparator(_creatorId, _creatorAddr), _v, _r, _s);
+        if (creatorAddrs[_creatorId] == address(0)) {
+            creatorAddrs[_creatorId] = _creatorAddr;
+            emit CreatorBound(_creatorId, _creatorAddr, block.timestamp);
+        }
+        uint256 amount = unclaimedCreatorFees[_creatorId];
+        if (amount > 0) {
+            unclaimedCreatorFees[_creatorId] = 0;
+            (bool success, ) = _creatorAddr.call{value: amount}("");
+            require(success, "Transfer failed");
+            emit RewardClaimed(_creatorAddr, block.timestamp, 0, amount);
+        }
     }
 }
