@@ -42,23 +42,46 @@ contract CreatorTechTest is Test {
     }
 
     function testFirstBuy_creatorAddrNotSet() public {
-        (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) = signData(
-            creatorId
-        );
+        uint256 balanceBefore = owner.balance;
+        (
+            uint8[] memory v,
+            bytes32[] memory r,
+            bytes32[] memory s
+        ) = signFirstBuyData(creatorId);
+        creatorTech.firstBuy{value: 1 ether}(creatorId, v, r, s);
+        (, uint256 totalBots, ) = creatorTech.creators(creatorId);
+        uint256 keyPrice = creatorTech.getKeyPrice(0, 1);
+        uint256 protocolFees = (keyPrice * creatorTech.protocolFee()) / 1 ether;
+        uint256 creatorTreasuryFees = (keyPrice *
+            creatorTech.creatorTreasuryFee()) / 1 ether;
+        // uint256 creatorFees = (keyPrice * creatorTech.creatorFee()) / 1 ether;
+        uint256 balanceAfter = balanceBefore +
+            protocolFees +
+            creatorTreasuryFees;
+        assertEq(owner.balance, balanceAfter);
+        assertEq(totalBots, 1);
+    }
+
+    function testBindCreatorAndClaim_setCreatorAddr() public {
+        (
+            uint8[] memory v,
+            bytes32[] memory r,
+            bytes32[] memory s
+        ) = signBindData(creatorId, creatorAddr);
+        creatorTech.bindCreatorAndClaim(creatorId, creatorAddr, v, r, s);
+        (v, r, s) = signFirstBuyData(creatorId);
         creatorTech.firstBuy{value: 1 ether}(creatorId, v, r, s);
         (, uint256 totalBots, ) = creatorTech.creators(creatorId);
         assertEq(totalBots, 1);
     }
 
-    function testBindCreatorAndClaim_setCreatorAddr() public {}
+    function testBindCreatorAndClaim_insufficientPayment() public {}
 
-    function testBindCreatorAndClaim_2() public {}
-
-    function testBindCreatorAndClaim_3() public {}
+    function testBindCreatorAndClaim_unableToSendFunds() public {}
 
     // Utility functions
 
-    function signData(
+    function signFirstBuyData(
         uint64 _creatorId
     ) public view returns (uint8[] memory, bytes32[] memory, bytes32[] memory) {
         bytes32 signedHash = _buildFirstBuySeparator(_creatorId);
@@ -70,6 +93,34 @@ contract CreatorTechTest is Test {
         (v[2], r[2], s[2]) = vm.sign(signerPrivateKeys[2], signedHash);
         creatorTech.recover(signedHash, v, r, s);
         return (v, r, s);
+    }
+
+    function signBindData(
+        uint64 _creatorId,
+        address _creatorAddr
+    ) public view returns (uint8[] memory, bytes32[] memory, bytes32[] memory) {
+        bytes32 signedHash = _buildBindSeparator(_creatorId, _creatorAddr);
+        uint8[] memory v = new uint8[](3);
+        bytes32[] memory r = new bytes32[](3);
+        bytes32[] memory s = new bytes32[](3);
+        (v[0], r[0], s[0]) = vm.sign(signerPrivateKeys[0], signedHash);
+        (v[1], r[1], s[1]) = vm.sign(signerPrivateKeys[1], signedHash);
+        (v[2], r[2], s[2]) = vm.sign(signerPrivateKeys[2], signedHash);
+        creatorTech.recover(signedHash, v, r, s);
+        return (v, r, s);
+    }
+
+    function _buildBindSeparator(
+        uint64 _creatorId,
+        address _creatorAddr
+    ) public view returns (bytes32) {
+        bytes32 BIND_TYPEHASH = keccak256(
+            abi.encodePacked("Bind(uint64 creatorId,address creatorAddr)")
+        );
+        return
+            mockEIP712._hashTypedDataV4(
+                keccak256(abi.encode(BIND_TYPEHASH, _creatorId, _creatorAddr))
+            );
     }
 
     function _buildFirstBuySeparator(

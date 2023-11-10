@@ -81,24 +81,31 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         Bot storage bot = creator.bots[creator.totalBots];
         creator.totalBots += 1;
         uint256 keyPrice = getKeyPrice(0, 1);
-        uint256 keyProtocolFee = (keyPrice * protocolFee) / 1 ether;
-        uint256 keyCreatorFee = (keyPrice * creatorFee) / 1 ether;
-        // uint256 rewardFee = (keyPrice * rewardFeePercent) / 1 ether;
-        uint256 keyValue = keyPrice + keyProtocolFee + keyCreatorFee;
+        uint256 protocolFees = (keyPrice * protocolFee) / 1 ether;
+        uint256 creatorTreasuryFees = (keyPrice * creatorTreasuryFee) / 1 ether;
+        uint256 creatorFees = (keyPrice * creatorFee) / 1 ether;
+        uint256 keyValue = keyPrice +
+            protocolFees +
+            creatorTreasuryFees +
+            creatorFees;
         require(msg.value >= keyValue, "Insufficient payment");
         bot.balanceOf[msg.sender] += 1;
         bot.totalSupply += 1;
         // totalReward += params.rewardFee;
         bool success;
         if (creator.creatorAddr == address(0)) {
-            creator.unclaimedCreatorFees += keyCreatorFee;
+            creator.unclaimedCreatorFees += creatorFees;
         } else {
-            (success, ) = creator.creatorAddr.call{value: keyCreatorFee}(
+            (success, ) = creator.creatorAddr.call{value: creatorFees}(
                 new bytes(0)
             );
             require(success, "Unable to send funds");
         }
-        (success, ) = protocolFeeRecipient.call{value: protocolFee}(
+        (success, ) = protocolFeeRecipient.call{value: protocolFees}(
+            new bytes(0)
+        );
+        require(success, "Unable to send funds");
+        (success, ) = creatorTreasury.call{value: creatorTreasuryFees}(
             new bytes(0)
         );
         require(success, "Unable to send funds");
@@ -195,7 +202,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     function _buildBindSeparator(
         uint64 _creatorId,
         address _creatorAddr
-    ) internal view returns (bytes32) {
+    ) public view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(abi.encode(BIND_TYPEHASH, _creatorId, _creatorAddr))
@@ -204,7 +211,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
     function _buildFirstBuySeparator(
         uint64 _creatorId
-    ) internal view returns (bytes32) {
+    ) public view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(abi.encode(FIRSTBUY_TYPEHASH, _creatorId))
