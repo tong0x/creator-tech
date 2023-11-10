@@ -7,6 +7,14 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     // TODO: Add fields related to rewards
+
+    struct Creator {
+        address creatorAddr; // ETH address of creator
+        uint256 totalBots; // total amount of bots of this creator
+        mapping(uint256 => Bot) bots; // bot idx => bot
+        uint256 unclaimedCreatorFees; // total amount of unclaimed creator fees
+    }
+
     struct Bot {
         uint64 creatorId; // Twitter UUID
         mapping(address => uint256) balanceOf; // trader => balance of keys
@@ -18,10 +26,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             abi.encodePacked("Bind(uint64 creatorId,address creatorAddr)")
         );
 
-    mapping(uint64 => address) public creatorAddrs; // Twitter UUID to ETH address
-    mapping(uint64 => mapping(uint256 => Bot)) public bots; // Twitter UUID => bot idx => bot
-
-    mapping(uint64 => uint256) public unclaimedCreatorFees;
+    mapping(uint64 => Creator) public creators; // Twitter UUID => Creator Info
 
     address[] public signers;
     mapping(address => bool) public isSigner;
@@ -170,16 +175,34 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     ) external nonReentrant {
         require(_creatorAddr != address(0), "Invalid creator address");
         recover(_buildBindSeparator(_creatorId, _creatorAddr), _v, _r, _s);
-        if (creatorAddrs[_creatorId] == address(0)) {
-            creatorAddrs[_creatorId] = _creatorAddr;
+        Creator storage creator = creators[_creatorId];
+        if (creator.creatorAddr == address(0)) {
+            creator.creatorAddr = _creatorAddr;
             emit CreatorBound(_creatorId, _creatorAddr, block.timestamp);
         }
-        uint256 amount = unclaimedCreatorFees[_creatorId];
+        uint256 amount = creator.unclaimedCreatorFees;
         if (amount > 0) {
-            unclaimedCreatorFees[_creatorId] = 0;
+            creator.unclaimedCreatorFees = 0;
             (bool success, ) = _creatorAddr.call{value: amount}("");
             require(success, "Transfer failed");
             emit RewardClaimed(_creatorAddr, block.timestamp, 0, amount);
         }
+    }
+
+    function getCreatorInfo(
+        uint64 _creatorId
+    )
+        external
+        view
+        returns (
+            address creatorAddr,
+            uint256 totalBots,
+            uint256 unclaimedCreatorFees
+        )
+    {
+        Creator storage creator = creators[_creatorId];
+        creatorAddr = creator.creatorAddr;
+        totalBots = creator.totalBots;
+        unclaimedCreatorFees = creator.unclaimedCreatorFees;
     }
 }
