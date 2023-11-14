@@ -16,11 +16,11 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     bytes32 public constant BIND_TYPEHASH =
-        keccak256(
-            abi.encodePacked("Bind(uint64 creatorId,address creatorAddr)")
-        );
+        keccak256(abi.encodePacked("Bind(bytes32 botId,address creatorAddr)"));
     bytes32 public constant FIRSTBUY_TYPEHASH =
-        keccak256(abi.encodePacked("FirstBuy(uint64 creatorId)"));
+        keccak256(abi.encodePacked("FirstBuy(bytes32 botId)"));
+    bytes32 public constant BUY_TYPEHASH =
+        keccak256(abi.encodePacked("Buy(bytes32 botId)"));
 
     mapping(bytes32 => Bot) public bots; // Bot ID => Bot Info
 
@@ -64,44 +64,137 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         creatorFee = 0.03 ether; // 3%
     }
 
+    struct TradeParameters {
+        uint256 value;
+        uint256 price;
+        uint256 protocolFee;
+        uint256 creatorFee;
+        uint256 creatorTreasuryFee;
+        bool success;
+    }
+
     function firstBuy(
-        bytes32 _botId,
-        uint8[] calldata _v,
-        bytes32[] calldata _r,
-        bytes32[] calldata _s
+        bytes32 botId,
+        uint8[] calldata v,
+        bytes32[] calldata r,
+        bytes32[] calldata s
     ) external payable nonReentrant {
-        recover(_buildFirstBuySeparator(_botId), _v, _r, _s);
-        Bot storage bot = bots[_botId];
-        uint256 keyPrice = getKeyPrice(0, 2);
-        uint256 protocolFees = (keyPrice * protocolFee) / 1 ether;
-        uint256 creatorTreasuryFees = (keyPrice * creatorTreasuryFee) / 1 ether;
-        uint256 creatorFees = (keyPrice * creatorFee) / 1 ether;
-        uint256 keyValue = keyPrice +
-            protocolFees +
-            creatorTreasuryFees +
-            creatorFees;
-        require(msg.value >= keyValue, "Insufficient payment");
+        recover(_buildFirstBuySeparator(botId), v, r, s);
+        Bot storage bot = bots[botId];
+        require(bot.firstBuy == false, "First buy already occurred");
+        TradeParameters memory params;
+        params.price = getKeyPrice(0, 2);
+        params.protocolFee = (params.price * protocolFee) / 1 ether;
+        params.creatorFee = (params.price * creatorFee) / 1 ether;
+        params.creatorTreasuryFee =
+            (params.price * creatorTreasuryFee) /
+            1 ether;
+        params.value =
+            params.price +
+            params.protocolFee +
+            params.creatorFee +
+            params.creatorTreasuryFee;
+        require(msg.value >= params.value, "Insufficient payment");
         bot.balanceOf[msg.sender] += 1;
         bot.totalSupply += 2;
-        bool success;
         if (bot.creatorAddr == address(0)) {
-            bot.unclaimedFees += creatorFees;
+            bot.unclaimedFees += params.creatorFee;
             bot.balanceOf[address(this)] += 1;
         } else {
-            (success, ) = bot.creatorAddr.call{value: creatorFees}(
+            (params.success, ) = bot.creatorAddr.call{value: params.creatorFee}(
                 new bytes(0)
             );
-            require(success, "Unable to send funds");
+            require(params.success, "Unable to send funds");
             bot.balanceOf[bot.creatorAddr] += 1;
         }
-        (success, ) = protocolFeeRecipient.call{value: protocolFees}(
-            new bytes(0)
-        );
-        require(success, "Unable to send funds");
-        (success, ) = creatorTreasury.call{value: creatorTreasuryFees}(
-            new bytes(0)
-        );
-        require(success, "Unable to send funds");
+        (params.success, ) = protocolFeeRecipient.call{
+            value: params.protocolFee
+        }(new bytes(0));
+        require(params.success, "Unable to send funds");
+        (params.success, ) = creatorTreasury.call{
+            value: params.creatorTreasuryFee
+        }(new bytes(0));
+        require(params.success, "Unable to send funds");
+    }
+
+    function buy(
+        bytes32 botId,
+        uint256 amount,
+        uint8[] calldata v,
+        bytes32[] calldata r,
+        bytes32[] calldata s
+    ) external payable nonReentrant {
+        recover(_buildBuySeparator(botId), v, r, s);
+        TradeParameters memory params;
+        Bot storage bot = bots[botId];
+        params.price = getKeyPrice(bot.totalSupply, amount);
+        params.protocolFee = (params.price * protocolFee) / 1 ether;
+        params.creatorFee = (params.price * creatorFee) / 1 ether;
+        params.creatorTreasuryFee =
+            (params.price * creatorTreasuryFee) /
+            1 ether;
+        params.value =
+            params.price +
+            params.protocolFee +
+            params.creatorFee +
+            params.creatorTreasuryFee;
+        require(msg.value >= params.value, "Insufficient payment");
+        bot.balanceOf[msg.sender] += amount;
+        bot.totalSupply += amount;
+
+        if (bot.creatorAddr == address(0)) {
+            bot.unclaimedFees += params.creatorFee;
+        } else {
+            (params.success, ) = bot.creatorAddr.call{value: params.creatorFee}(
+                new bytes(0)
+            );
+            require(params.success, "Unable to send funds");
+        }
+        (params.success, ) = protocolFeeRecipient.call{
+            value: params.protocolFee
+        }(new bytes(0));
+        require(params.success, "Unable to send funds");
+        (params.success, ) = creatorTreasury.call{
+            value: params.creatorTreasuryFee
+        }(new bytes(0));
+        require(params.success, "Unable to send funds");
+    }
+
+    function sellVotePass(bytes32 botId, uint256 amount) external nonReentrant {
+        TradeParameters memory params;
+        Bot storage bot = bots[botId];
+        require(bot.balanceOf[msg.sender] >= amount, "Insufficient passes");
+        params.price = getKeyPrice(bot.totalSupply - amount, amount);
+        params.protocolFee = (params.price * protocolFee) / 1 ether;
+        params.creatorFee = (params.price * creatorFee) / 1 ether;
+        params.creatorTreasuryFee =
+            (params.price * creatorTreasuryFee) /
+            1 ether;
+        params.value =
+            params.price -
+            params.protocolFee -
+            params.creatorFee -
+            params.creatorTreasuryFee;
+        bot.balanceOf[msg.sender] -= amount;
+        bot.totalSupply -= amount;
+        if (bot.creatorAddr == address(0)) {
+            bot.unclaimedFees += params.creatorFee;
+        } else {
+            (params.success, ) = bot.creatorAddr.call{value: params.creatorFee}(
+                new bytes(0)
+            );
+            require(params.success, "Unable to send funds");
+        }
+        (params.success, ) = msg.sender.call{value: params.value}(new bytes(0));
+        require(params.success, "Unable to send funds");
+        (params.success, ) = protocolFeeRecipient.call{
+            value: params.protocolFee
+        }(new bytes(0));
+        require(params.success, "Unable to send funds");
+        (params.success, ) = creatorTreasury.call{
+            value: params.creatorTreasuryFee
+        }(new bytes(0));
+        require(params.success, "Unable to send funds");
     }
 
     function addSigner(address _signer) public onlyOwner {
@@ -213,6 +306,10 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     ) public view returns (bytes32) {
         return
             _hashTypedDataV4(keccak256(abi.encode(FIRSTBUY_TYPEHASH, _botId)));
+    }
+
+    function _buildBuySeparator(bytes32 _botId) public view returns (bytes32) {
+        return _hashTypedDataV4(keccak256(abi.encode(BUY_TYPEHASH, _botId)));
     }
 
     function bindCreatorAndClaim(
