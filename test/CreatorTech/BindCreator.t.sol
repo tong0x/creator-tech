@@ -24,13 +24,13 @@ contract CreatorTechTest is Test {
     }
 
     function testBindCreatorAndClaim_withoutUnclaimedFees() public {
-        uint64 creatorId = 1;
+        uint64 botId = 1;
         address creatorAddr = address(0x1);
         (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) = signData(
-            creatorId,
+            botId,
             creatorAddr
         );
-        bytes32 signedHash = _buildBindSeparator(creatorId, creatorAddr);
+        bytes32 signedHash = _buildBindSeparator(botId, creatorAddr);
         // bytes32 signedHashContract = creatorTech._buildBindSeparator(
         //     creatorId,
         //     creatorAddr
@@ -38,9 +38,9 @@ contract CreatorTechTest is Test {
         // require(signedHash == signedHashContract, "Hash mismatch");
         bool success = creatorTech.recover(signedHash, v, r, s);
         require(success, "Failed to recover");
-        creatorTech.bindCreatorAndClaim(creatorId, creatorAddr, v, r, s);
-        (address getCreatorAddr, , ) = creatorTech.getCreatorInfo(creatorId);
-        assertEq(getCreatorAddr, creatorAddr);
+        creatorTech.bindCreatorAndClaim(botId, creatorAddr, v, r, s);
+        address ctCreatorAddr = creatorTech.getBotCreatorAddr(botId);
+        assertEq(ctCreatorAddr, creatorAddr);
     }
 
     function signData(
