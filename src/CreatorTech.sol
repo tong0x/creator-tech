@@ -159,7 +159,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     function _buildBindSeparator(
         uint64 _botId,
         address _creatorAddr
-    ) internal view returns (bytes32) {
+    ) public view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(abi.encode(BIND_TYPEHASH, _botId, _creatorAddr))
