@@ -8,9 +8,11 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     // TODO: Add fields related to rewards
     struct Bot {
-        uint64 creatorId; // Twitter UUID
+        bool firstBuy; // if first buy has occurred
+        address creatorAddr; // Creator Address, can be 0 initially
         mapping(address => uint256) balanceOf; // trader => balance of keys
         uint256 totalSupply; // of keys
+        uint256 unclaimedFees; // fees accumulated before a creator is assigned
     }
 
     bytes32 public constant BIND_TYPEHASH =
@@ -18,10 +20,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             abi.encodePacked("Bind(uint64 creatorId,address creatorAddr)")
         );
 
-    mapping(uint64 => address) public creatorAddrs; // Twitter UUID to ETH address
-    mapping(uint64 => mapping(uint256 => Bot)) public bots; // Twitter UUID => bot idx => bot
-
-    mapping(uint64 => uint256) public unclaimedCreatorFees;
+    mapping(uint64 => Bot) bots; // Bot ID => Bot Info
 
     address[] public signers;
     mapping(address => bool) public isSigner;
@@ -141,6 +140,12 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         return (_n == 0) ? 0 : (_n * (_n + 1) * (2 * _n + 1)) / 6;
     }
 
+    function getBotCreatorAddr(
+        uint64 _botId
+    ) external view returns (address creatorAddr) {
+        creatorAddr = bots[_botId].creatorAddr;
+    }
+
     function getKeyPrice(
         uint256 _currentSupply,
         uint256 _keyAmount
@@ -152,31 +157,32 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     function _buildBindSeparator(
-        uint64 _creatorId,
+        uint64 _botId,
         address _creatorAddr
-    ) internal view returns (bytes32) {
+    ) public view returns (bytes32) {
         return
             _hashTypedDataV4(
-                keccak256(abi.encode(BIND_TYPEHASH, _creatorId, _creatorAddr))
+                keccak256(abi.encode(BIND_TYPEHASH, _botId, _creatorAddr))
             );
     }
 
     function bindCreatorAndClaim(
-        uint64 _creatorId,
+        uint64 _botId,
         address _creatorAddr,
         uint8[] calldata _v,
         bytes32[] calldata _r,
         bytes32[] calldata _s
     ) external nonReentrant {
         require(_creatorAddr != address(0), "Invalid creator address");
-        recover(_buildBindSeparator(_creatorId, _creatorAddr), _v, _r, _s);
-        if (creatorAddrs[_creatorId] == address(0)) {
-            creatorAddrs[_creatorId] = _creatorAddr;
-            emit CreatorBound(_creatorId, _creatorAddr, block.timestamp);
+        recover(_buildBindSeparator(_botId, _creatorAddr), _v, _r, _s);
+        Bot storage bot = bots[_botId];
+        if (bot.creatorAddr == address(0)) {
+            bot.creatorAddr = _creatorAddr;
+            emit CreatorBound(_botId, _creatorAddr, block.timestamp);
         }
-        uint256 amount = unclaimedCreatorFees[_creatorId];
+        uint256 amount = bot.unclaimedFees;
         if (amount > 0) {
-            unclaimedCreatorFees[_creatorId] = 0;
+            bot.unclaimedFees = 0;
             (bool success, ) = _creatorAddr.call{value: amount}("");
             require(success, "Transfer failed");
             emit RewardClaimed(_creatorAddr, block.timestamp, 0, amount);
