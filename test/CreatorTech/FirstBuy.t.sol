@@ -6,7 +6,7 @@ import {CreatorTech} from "../../src/CreatorTech.sol";
 
 contract CreatorTechTest is Test {
     address owner = address(0x123);
-    uint64 botId = 1;
+    bytes32 botId = bytes32(uint256(123));
     address creatorAddr = address(0x1);
     address[] public signers = new address[](3);
     uint256[] public signerPrivateKeys = new uint256[](3);
@@ -76,9 +76,9 @@ contract CreatorTechTest is Test {
     // Utility functions
 
     function signFirstBuyData(
-        uint64 _creatorId
+        bytes32 _botId
     ) public view returns (uint8[] memory, bytes32[] memory, bytes32[] memory) {
-        bytes32 signedHash = creatorTech._buildFirstBuySeparator(_creatorId);
+        bytes32 signedHash = creatorTech._buildFirstBuySeparator(_botId);
         uint8[] memory v = new uint8[](3);
         bytes32[] memory r = new bytes32[](3);
         bytes32[] memory s = new bytes32[](3);
@@ -90,11 +90,11 @@ contract CreatorTechTest is Test {
     }
 
     function signBindData(
-        uint64 _creatorId,
+        bytes32 _botId,
         address _creatorAddr
     ) public view returns (uint8[] memory, bytes32[] memory, bytes32[] memory) {
         bytes32 signedHash = creatorTech._buildBindSeparator(
-            _creatorId,
+            _botId,
             _creatorAddr
         );
         uint8[] memory v = new uint8[](3);

@@ -22,7 +22,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     bytes32 public constant FIRSTBUY_TYPEHASH =
         keccak256(abi.encodePacked("FirstBuy(uint64 creatorId)"));
 
-    mapping(uint64 => Bot) public bots; // Bot ID => Bot Info
+    mapping(bytes32 => Bot) public bots; // Bot ID => Bot Info
 
     address[] public signers;
     mapping(address => bool) public isSigner;
@@ -38,7 +38,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     event SignerAdded(address indexed signer);
     event SignerRemoved(address indexed signer);
     event CreatorBound(
-        uint64 indexed creatorId,
+        bytes32 indexed creatorId,
         address creatorAddr,
         uint256 timestamp
     );
@@ -65,7 +65,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     function firstBuy(
-        uint64 _botId,
+        bytes32 _botId,
         uint8[] calldata _v,
         bytes32[] calldata _r,
         bytes32[] calldata _s
@@ -183,7 +183,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     function getBotCreatorAddr(
-        uint64 _botId
+        bytes32 _botId
     ) external view returns (address creatorAddr) {
         creatorAddr = bots[_botId].creatorAddr;
     }
@@ -199,7 +199,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     function _buildBindSeparator(
-        uint64 _botId,
+        bytes32 _botId,
         address _creatorAddr
     ) public view returns (bytes32) {
         return
@@ -209,14 +209,14 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     function _buildFirstBuySeparator(
-        uint64 _botId
+        bytes32 _botId
     ) public view returns (bytes32) {
         return
             _hashTypedDataV4(keccak256(abi.encode(FIRSTBUY_TYPEHASH, _botId)));
     }
 
     function bindCreatorAndClaim(
-        uint64 _botId,
+        bytes32 _botId,
         address _creatorAddr,
         uint8[] calldata _v,
         bytes32[] calldata _r,
