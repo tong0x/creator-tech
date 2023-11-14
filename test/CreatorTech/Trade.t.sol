@@ -6,6 +6,7 @@ import {CreatorTech} from "../../src/CreatorTech.sol";
 
 contract CreatorTechTest is Test {
     address owner = address(0x123);
+    address trader = address(0x234);
     bytes32 botId = bytes32(uint256(123));
     address creatorAddr = address(0x1);
     address[] public signers = new address[](3);
@@ -21,6 +22,7 @@ contract CreatorTechTest is Test {
         signers[2] = vm.addr(signerPrivateKeys[2]);
         vm.prank(owner);
         vm.deal(owner, 1000 ether);
+        vm.deal(trader, 1000 ether);
         // vm.deal(address(this), 1000 ether);
         creatorTech = new CreatorTech(signers);
     }
@@ -69,16 +71,38 @@ contract CreatorTechTest is Test {
         ) = signFirstBuyData(botId);
         creatorTech.firstBuy{value: 1 ether}(botId, v, r, s);
         uint256 amount = 3;
+        vm.startPrank(trader);
         (v, r, s) = signBuyData(botId, amount);
         creatorTech.buyKey{value: 1 ether}(botId, amount, v, r, s);
         uint256 balanceOfBuyer = creatorTech.getBotBalanceOf(
             botId,
-            address(this)
+            address(trader)
         );
-        assertEq(balanceOfBuyer, amount + 1);
+        assertEq(balanceOfBuyer, amount);
+        vm.stopPrank();
     }
 
-    function testSellKey() public {}
+    function testSellKey() public {
+        (
+            uint8[] memory v,
+            bytes32[] memory r,
+            bytes32[] memory s
+        ) = signFirstBuyData(botId);
+        creatorTech.firstBuy{value: 1 ether}(botId, v, r, s);
+        uint256 amount = 3;
+        (v, r, s) = signBuyData(botId, amount);
+        vm.startPrank(trader);
+        creatorTech.buyKey{value: 1 ether}(botId, amount, v, r, s);
+        uint256 balanceOfBuyer = creatorTech.getBotBalanceOf(
+            botId,
+            address(trader)
+        );
+        assertEq(balanceOfBuyer, amount);
+        creatorTech.sellKey(botId, amount);
+        balanceOfBuyer = creatorTech.getBotBalanceOf(botId, address(trader));
+        assertEq(balanceOfBuyer, 0);
+        vm.stopPrank();
+    }
 
     // Utility functions
 
