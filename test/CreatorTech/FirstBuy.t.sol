@@ -4,16 +4,13 @@ pragma solidity 0.8.22;
 import "forge-std/Test.sol";
 import {CreatorTech} from "../../src/CreatorTech.sol";
 
-import {MockEIP712} from "../utils/MockEIP712.sol"; // mock contract address for verification
-
 contract CreatorTechTest is Test {
     address owner = address(0x123);
-    uint64 creatorId = 1;
+    uint64 botId = 1;
     address creatorAddr = address(0x1);
     address[] public signers = new address[](3);
     uint256[] public signerPrivateKeys = new uint256[](3);
     CreatorTech creatorTech;
-    MockEIP712 mockEIP712;
 
     struct Creator {
         address creatorAddr; // ETH address of creator
@@ -38,7 +35,6 @@ contract CreatorTechTest is Test {
         vm.prank(owner);
         vm.deal(owner, 1000 ether);
         creatorTech = new CreatorTech(signers);
-        mockEIP712 = new MockEIP712("CreatorTech", "1", address(creatorTech));
     }
 
     function testFirstBuy_creatorAddrNotSet() public {
@@ -47,10 +43,9 @@ contract CreatorTechTest is Test {
             uint8[] memory v,
             bytes32[] memory r,
             bytes32[] memory s
-        ) = signFirstBuyData(creatorId);
-        creatorTech.firstBuy{value: 1 ether}(creatorId, v, r, s);
-        (, uint256 totalBots, ) = creatorTech.creators(creatorId);
-        uint256 keyPrice = creatorTech.getKeyPrice(0, 1);
+        ) = signFirstBuyData(botId);
+        creatorTech.firstBuy{value: 1 ether}(botId, v, r, s);
+        uint256 keyPrice = creatorTech.getKeyPrice(0, 2);
         uint256 protocolFees = (keyPrice * creatorTech.protocolFee()) / 1 ether;
         uint256 creatorTreasuryFees = (keyPrice *
             creatorTech.creatorTreasuryFee()) / 1 ether;
@@ -59,7 +54,6 @@ contract CreatorTechTest is Test {
             protocolFees +
             creatorTreasuryFees;
         assertEq(owner.balance, balanceAfter);
-        assertEq(totalBots, 1);
     }
 
     function testBindCreatorAndClaim_setCreatorAddr() public {
@@ -67,12 +61,12 @@ contract CreatorTechTest is Test {
             uint8[] memory v,
             bytes32[] memory r,
             bytes32[] memory s
-        ) = signBindData(creatorId, creatorAddr);
-        creatorTech.bindCreatorAndClaim(creatorId, creatorAddr, v, r, s);
-        (v, r, s) = signFirstBuyData(creatorId);
-        creatorTech.firstBuy{value: 1 ether}(creatorId, v, r, s);
-        (, uint256 totalBots, ) = creatorTech.creators(creatorId);
-        assertEq(totalBots, 1);
+        ) = signBindData(botId, creatorAddr);
+        creatorTech.bindCreatorAndClaim(botId, creatorAddr, v, r, s);
+        (v, r, s) = signFirstBuyData(botId);
+        creatorTech.firstBuy{value: 1 ether}(botId, v, r, s);
+        (, address getCreatorAddr, , ) = creatorTech.bots(botId);
+        assertEq(getCreatorAddr, creatorAddr);
     }
 
     function testBindCreatorAndClaim_insufficientPayment() public {}
@@ -84,7 +78,7 @@ contract CreatorTechTest is Test {
     function signFirstBuyData(
         uint64 _creatorId
     ) public view returns (uint8[] memory, bytes32[] memory, bytes32[] memory) {
-        bytes32 signedHash = _buildFirstBuySeparator(_creatorId);
+        bytes32 signedHash = creatorTech._buildFirstBuySeparator(_creatorId);
         uint8[] memory v = new uint8[](3);
         bytes32[] memory r = new bytes32[](3);
         bytes32[] memory s = new bytes32[](3);
@@ -99,7 +93,10 @@ contract CreatorTechTest is Test {
         uint64 _creatorId,
         address _creatorAddr
     ) public view returns (uint8[] memory, bytes32[] memory, bytes32[] memory) {
-        bytes32 signedHash = _buildBindSeparator(_creatorId, _creatorAddr);
+        bytes32 signedHash = creatorTech._buildBindSeparator(
+            _creatorId,
+            _creatorAddr
+        );
         uint8[] memory v = new uint8[](3);
         bytes32[] memory r = new bytes32[](3);
         bytes32[] memory s = new bytes32[](3);
@@ -108,30 +105,5 @@ contract CreatorTechTest is Test {
         (v[2], r[2], s[2]) = vm.sign(signerPrivateKeys[2], signedHash);
         creatorTech.recover(signedHash, v, r, s);
         return (v, r, s);
-    }
-
-    function _buildBindSeparator(
-        uint64 _creatorId,
-        address _creatorAddr
-    ) public view returns (bytes32) {
-        bytes32 BIND_TYPEHASH = keccak256(
-            abi.encodePacked("Bind(uint64 creatorId,address creatorAddr)")
-        );
-        return
-            mockEIP712._hashTypedDataV4(
-                keccak256(abi.encode(BIND_TYPEHASH, _creatorId, _creatorAddr))
-            );
-    }
-
-    function _buildFirstBuySeparator(
-        uint64 _creatorId
-    ) public view returns (bytes32) {
-        bytes32 FIRSTBUY_TYPEHASH = keccak256(
-            abi.encodePacked("FirstBuy(uint64 creatorId)")
-        );
-        return
-            mockEIP712._hashTypedDataV4(
-                keccak256(abi.encode(FIRSTBUY_TYPEHASH, _creatorId))
-            );
     }
 }
