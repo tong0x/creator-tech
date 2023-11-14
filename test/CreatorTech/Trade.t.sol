@@ -12,19 +12,6 @@ contract CreatorTechTest is Test {
     uint256[] public signerPrivateKeys = new uint256[](3);
     CreatorTech creatorTech;
 
-    struct Creator {
-        address creatorAddr; // ETH address of creator
-        uint256 totalBots; // total amount of bots of this creator
-        mapping(uint256 => Bot) bots; // bot idx => bot
-        uint256 unclaimedCreatorFees; // total amount of unclaimed creator fees
-    }
-
-    struct Bot {
-        uint64 creatorId; // Twitter UUID
-        mapping(address => uint256) balanceOf; // trader => balance of keys
-        uint256 totalSupply; // of keys
-    }
-
     function setUp() public {
         signerPrivateKeys[0] = 0x1;
         signerPrivateKeys[1] = 0x2;
@@ -34,6 +21,7 @@ contract CreatorTechTest is Test {
         signers[2] = vm.addr(signerPrivateKeys[2]);
         vm.prank(owner);
         vm.deal(owner, 1000 ether);
+        // vm.deal(address(this), 1000 ether);
         creatorTech = new CreatorTech(signers);
     }
 
@@ -73,12 +61,46 @@ contract CreatorTechTest is Test {
 
     function testBindCreatorAndClaim_unableToSendFunds() public {}
 
+    function testBuyKey() public {
+        (
+            uint8[] memory v,
+            bytes32[] memory r,
+            bytes32[] memory s
+        ) = signFirstBuyData(botId);
+        creatorTech.firstBuy{value: 1 ether}(botId, v, r, s);
+        uint256 amount = 3;
+        (v, r, s) = signBuyData(botId, amount);
+        creatorTech.buyKey{value: 1 ether}(botId, amount, v, r, s);
+        uint256 balanceOfBuyer = creatorTech.getBotBalanceOf(
+            botId,
+            address(this)
+        );
+        assertEq(balanceOfBuyer, amount + 1);
+    }
+
+    function testSellKey() public {}
+
     // Utility functions
 
     function signFirstBuyData(
         bytes32 _botId
     ) public view returns (uint8[] memory, bytes32[] memory, bytes32[] memory) {
         bytes32 signedHash = creatorTech._buildFirstBuySeparator(_botId);
+        uint8[] memory v = new uint8[](3);
+        bytes32[] memory r = new bytes32[](3);
+        bytes32[] memory s = new bytes32[](3);
+        (v[0], r[0], s[0]) = vm.sign(signerPrivateKeys[0], signedHash);
+        (v[1], r[1], s[1]) = vm.sign(signerPrivateKeys[1], signedHash);
+        (v[2], r[2], s[2]) = vm.sign(signerPrivateKeys[2], signedHash);
+        creatorTech.recover(signedHash, v, r, s);
+        return (v, r, s);
+    }
+
+    function signBuyData(
+        bytes32 _botId,
+        uint256 _amount
+    ) public view returns (uint8[] memory, bytes32[] memory, bytes32[] memory) {
+        bytes32 signedHash = creatorTech._buildBuySeparator(_botId, _amount);
         uint8[] memory v = new uint8[](3);
         bytes32[] memory r = new bytes32[](3);
         bytes32[] memory s = new bytes32[](3);

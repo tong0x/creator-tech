@@ -20,7 +20,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     bytes32 public constant FIRSTBUY_TYPEHASH =
         keccak256(abi.encodePacked("FirstBuy(bytes32 botId)"));
     bytes32 public constant BUY_TYPEHASH =
-        keccak256(abi.encodePacked("Buy(bytes32 botId)"));
+        keccak256(abi.encodePacked("Buy(bytes32 botId,uint256 amount)"));
 
     mapping(bytes32 => Bot) public bots; // Bot ID => Bot Info
 
@@ -82,6 +82,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         recover(_buildFirstBuySeparator(botId), v, r, s);
         Bot storage bot = bots[botId];
         require(bot.firstBuy == false, "First buy already occurred");
+        bot.firstBuy = true;
         TradeParameters memory params;
         params.price = getKeyPrice(0, 2);
         params.protocolFee = (params.price * protocolFee) / 1 ether;
@@ -117,16 +118,17 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         require(params.success, "Unable to send funds");
     }
 
-    function buy(
+    function buyKey(
         bytes32 botId,
         uint256 amount,
         uint8[] calldata v,
         bytes32[] calldata r,
         bytes32[] calldata s
     ) external payable nonReentrant {
-        recover(_buildBuySeparator(botId), v, r, s);
+        recover(_buildBuySeparator(botId, amount), v, r, s);
         TradeParameters memory params;
         Bot storage bot = bots[botId];
+        require(bot.firstBuy == true, "First buy has not occurred");
         params.price = getKeyPrice(bot.totalSupply, amount);
         params.protocolFee = (params.price * protocolFee) / 1 ether;
         params.creatorFee = (params.price * creatorFee) / 1 ether;
@@ -160,9 +162,10 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         require(params.success, "Unable to send funds");
     }
 
-    function sellVotePass(bytes32 botId, uint256 amount) external nonReentrant {
+    function sellKey(bytes32 botId, uint256 amount) external nonReentrant {
         TradeParameters memory params;
         Bot storage bot = bots[botId];
+        require(bot.firstBuy == true, "First buy has not occurred");
         require(bot.balanceOf[msg.sender] >= amount, "Insufficient passes");
         params.price = getKeyPrice(bot.totalSupply - amount, amount);
         params.protocolFee = (params.price * protocolFee) / 1 ether;
@@ -275,10 +278,15 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         return (_n == 0) ? 0 : (_n * (_n + 1) * (2 * _n + 1)) / 6;
     }
 
-    function getBotCreatorAddr(
-        bytes32 _botId
-    ) external view returns (address creatorAddr) {
-        creatorAddr = bots[_botId].creatorAddr;
+    function getBotCreatorAddr(bytes32 _botId) external view returns (address) {
+        return bots[_botId].creatorAddr;
+    }
+
+    function getBotBalanceOf(
+        bytes32 _botId,
+        address account
+    ) external view returns (uint256) {
+        return bots[_botId].balanceOf[account];
     }
 
     function getKeyPrice(
@@ -308,8 +316,14 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             _hashTypedDataV4(keccak256(abi.encode(FIRSTBUY_TYPEHASH, _botId)));
     }
 
-    function _buildBuySeparator(bytes32 _botId) public view returns (bytes32) {
-        return _hashTypedDataV4(keccak256(abi.encode(BUY_TYPEHASH, _botId)));
+    function _buildBuySeparator(
+        bytes32 _botId,
+        uint256 _amount
+    ) public view returns (bytes32) {
+        return
+            _hashTypedDataV4(
+                keccak256(abi.encode(BUY_TYPEHASH, _botId, _amount))
+            );
     }
 
     function bindCreatorAndClaim(
