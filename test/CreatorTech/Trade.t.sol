@@ -28,14 +28,15 @@ contract CreatorTechTest is Test {
     }
 
     function testFirstBuy_creatorAddrNotSet() public {
+        uint256 firstBuyAmount = 3;
         uint256 balanceBefore = owner.balance;
         (
             uint8[] memory v,
             bytes32[] memory r,
             bytes32[] memory s
-        ) = signFirstBuyData(botId);
-        creatorTech.firstBuy{value: 1 ether}(botId, v, r, s);
-        uint256 keyPrice = creatorTech.getKeyPrice(0, 2);
+        ) = signFirstBuyData(botId, firstBuyAmount);
+        creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
+        uint256 keyPrice = creatorTech.getKeyPrice(0, firstBuyAmount + 1);
         uint256 protocolFees = (keyPrice * creatorTech.protocolFee()) / 1 ether;
         uint256 creatorTreasuryFees = (keyPrice *
             creatorTech.creatorTreasuryFee()) / 1 ether;
@@ -47,14 +48,15 @@ contract CreatorTechTest is Test {
     }
 
     function testBindCreatorAndClaim_setCreatorAddr() public {
+        uint256 firstBuyAmount = 3;
         (
             uint8[] memory v,
             bytes32[] memory r,
             bytes32[] memory s
         ) = signBindData(botId, creatorAddr);
         creatorTech.bindCreatorAndClaim(botId, creatorAddr, v, r, s);
-        (v, r, s) = signFirstBuyData(botId);
-        creatorTech.firstBuy{value: 1 ether}(botId, v, r, s);
+        (v, r, s) = signFirstBuyData(botId, firstBuyAmount);
+        creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
         (, address getCreatorAddr, , ) = creatorTech.bots(botId);
         assertEq(getCreatorAddr, creatorAddr);
     }
@@ -64,12 +66,13 @@ contract CreatorTechTest is Test {
     function testBindCreatorAndClaim_unableToSendFunds() public {}
 
     function testBuyKey() public {
+        uint256 firstBuyAmount = 3;
         (
             uint8[] memory v,
             bytes32[] memory r,
             bytes32[] memory s
-        ) = signFirstBuyData(botId);
-        creatorTech.firstBuy{value: 1 ether}(botId, v, r, s);
+        ) = signFirstBuyData(botId, firstBuyAmount);
+        creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
         uint256 amount = 3;
         vm.startPrank(trader);
         (v, r, s) = signBuyData(botId, amount);
@@ -83,12 +86,13 @@ contract CreatorTechTest is Test {
     }
 
     function testSellKey() public {
+        uint256 firstBuyAmount = 3;
         (
             uint8[] memory v,
             bytes32[] memory r,
             bytes32[] memory s
-        ) = signFirstBuyData(botId);
-        creatorTech.firstBuy{value: 1 ether}(botId, v, r, s);
+        ) = signFirstBuyData(botId, firstBuyAmount);
+        creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
         uint256 amount = 3;
         (v, r, s) = signBuyData(botId, amount);
         vm.startPrank(trader);
@@ -107,9 +111,13 @@ contract CreatorTechTest is Test {
     // Utility functions
 
     function signFirstBuyData(
-        bytes32 _botId
+        bytes32 _botId,
+        uint256 _amount
     ) public view returns (uint8[] memory, bytes32[] memory, bytes32[] memory) {
-        bytes32 signedHash = creatorTech._buildFirstBuySeparator(_botId);
+        bytes32 signedHash = creatorTech._buildFirstBuySeparator(
+            _botId,
+            _amount
+        );
         uint8[] memory v = new uint8[](3);
         bytes32[] memory r = new bytes32[](3);
         bytes32[] memory s = new bytes32[](3);
