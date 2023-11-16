@@ -24,15 +24,15 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
     struct TradeEvent {
         uint256 eventIndex;
-        uint256 ts;
+        uint256 timestamp;
         address trader;
         bytes32 bot;
         bool isBuy;
         bool isFirstBuy;
-        uint256 buyAmount;
+        uint256 keyAmount;
         uint256 ethAmount;
         uint256 traderBalance;
-        uint256 supply;
+        uint256 keySupply;
     }
 
     address public protocolFeeRecipient;
@@ -87,19 +87,19 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     function firstBuy(
-        bytes32 botId,
-        uint256 amount,
-        uint8[] calldata v,
-        bytes32[] calldata r,
-        bytes32[] calldata s
+        bytes32 _botId,
+        uint256 _amount,
+        uint8[] calldata _v,
+        bytes32[] calldata _r,
+        bytes32[] calldata _s
     ) external payable nonReentrant {
-        recover(_buildFirstBuySeparator(botId, amount), v, r, s);
-        Bot storage bot = bots[botId];
+        recover(_buildFirstBuySeparator(_botId, _amount), _v, _r, _s);
+        Bot storage bot = bots[_botId];
         require(bot.firstBuy == false, "First buy already occurred");
         require(bot.totalSupply == 0, "Bot already initialized");
         bot.firstBuy = true;
         TradeParameters memory params;
-        params.price = getKeyPrice(bot.totalSupply, amount + 1);
+        params.price = getKeyPrice(bot.totalSupply, _amount + 1);
         params.protocolFee = (params.price * protocolFee) / 1 ether;
         params.creatorFee = (params.price * creatorFee) / 1 ether;
         params.creatorTreasuryFee =
@@ -111,8 +111,8 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             params.creatorFee +
             params.creatorTreasuryFee;
         require(msg.value >= params.value, "Insufficient payment");
-        bot.balanceOf[msg.sender] += amount;
-        bot.totalSupply += amount + 1;
+        bot.balanceOf[msg.sender] += _amount;
+        bot.totalSupply += _amount + 1;
         if (bot.creatorAddr == address(0)) {
             bot.unclaimedFees += params.creatorFee;
             bot.balanceOf[address(this)] += 1;
@@ -135,31 +135,31 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         emit Trade(
             TradeEvent({
                 eventIndex: tradeIndex++,
-                ts: block.timestamp,
+                timestamp: block.timestamp,
                 trader: msg.sender,
-                bot: botId,
+                bot: _botId,
                 isBuy: true,
                 isFirstBuy: true,
-                buyAmount: amount,
+                keyAmount: _amount,
                 ethAmount: params.price,
                 traderBalance: bot.balanceOf[msg.sender],
-                supply: bot.totalSupply
+                keySupply: bot.totalSupply
             })
         );
     }
 
     function buyKey(
-        bytes32 botId,
-        uint256 amount,
-        uint8[] calldata v,
-        bytes32[] calldata r,
-        bytes32[] calldata s
+        bytes32 _botId,
+        uint256 _amount,
+        uint8[] calldata _v,
+        bytes32[] calldata _r,
+        bytes32[] calldata _s
     ) external payable nonReentrant {
-        recover(_buildBuySeparator(botId, amount), v, r, s);
+        recover(_buildBuySeparator(_botId, _amount), _v, _r, _s);
         TradeParameters memory params;
-        Bot storage bot = bots[botId];
+        Bot storage bot = bots[_botId];
         require(bot.firstBuy == true, "First buy has not occurred");
-        params.price = getKeyPrice(bot.totalSupply, amount);
+        params.price = getKeyPrice(bot.totalSupply, _amount);
         params.protocolFee = (params.price * protocolFee) / 1 ether;
         params.creatorFee = (params.price * creatorFee) / 1 ether;
         params.creatorTreasuryFee =
@@ -171,8 +171,8 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             params.creatorFee +
             params.creatorTreasuryFee;
         require(msg.value >= params.value, "Insufficient payment");
-        bot.balanceOf[msg.sender] += amount;
-        bot.totalSupply += amount;
+        bot.balanceOf[msg.sender] += _amount;
+        bot.totalSupply += _amount;
 
         if (bot.creatorAddr == address(0)) {
             bot.unclaimedFees += params.creatorFee;
@@ -194,25 +194,25 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         emit Trade(
             TradeEvent({
                 eventIndex: tradeIndex++,
-                ts: block.timestamp,
+                timestamp: block.timestamp,
                 trader: msg.sender,
-                bot: botId,
+                bot: _botId,
                 isBuy: true,
                 isFirstBuy: false,
-                buyAmount: amount,
+                keyAmount: _amount,
                 ethAmount: params.price,
                 traderBalance: bot.balanceOf[msg.sender],
-                supply: bot.totalSupply
+                keySupply: bot.totalSupply
             })
         );
     }
 
-    function sellKey(bytes32 botId, uint256 amount) external nonReentrant {
+    function sellKey(bytes32 _botId, uint256 _amount) external nonReentrant {
         TradeParameters memory params;
-        Bot storage bot = bots[botId];
+        Bot storage bot = bots[_botId];
         require(bot.firstBuy == true, "First buy has not occurred");
-        require(bot.balanceOf[msg.sender] >= amount, "Insufficient passes");
-        params.price = getKeyPrice(bot.totalSupply - amount, amount);
+        require(bot.balanceOf[msg.sender] >= _amount, "Insufficient passes");
+        params.price = getKeyPrice(bot.totalSupply - _amount, _amount);
         params.protocolFee = (params.price * protocolFee) / 1 ether;
         params.creatorFee = (params.price * creatorFee) / 1 ether;
         params.creatorTreasuryFee =
@@ -223,8 +223,8 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             params.protocolFee -
             params.creatorFee -
             params.creatorTreasuryFee;
-        bot.balanceOf[msg.sender] -= amount;
-        bot.totalSupply -= amount;
+        bot.balanceOf[msg.sender] -= _amount;
+        bot.totalSupply -= _amount;
         if (bot.creatorAddr == address(0)) {
             bot.unclaimedFees += params.creatorFee;
         } else {
@@ -247,15 +247,15 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         emit Trade(
             TradeEvent({
                 eventIndex: tradeIndex++,
-                ts: block.timestamp,
+                timestamp: block.timestamp,
                 trader: msg.sender,
-                bot: botId,
+                bot: _botId,
                 isBuy: false,
                 isFirstBuy: false,
-                buyAmount: amount,
+                keyAmount: _amount,
                 ethAmount: params.price,
                 traderBalance: bot.balanceOf[msg.sender],
-                supply: bot.totalSupply
+                keySupply: bot.totalSupply
             })
         );
     }
@@ -287,20 +287,20 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     function recover(
-        bytes32 hash,
-        uint8[] calldata v,
-        bytes32[] calldata r,
-        bytes32[] calldata s
+        bytes32 _hash,
+        uint8[] calldata _v,
+        bytes32[] calldata _r,
+        bytes32[] calldata _s
     ) public view returns (bool) {
         uint256 length = signers.length;
         require(length > 0, "No signers");
         require(
-            length == v.length && length == r.length && length == s.length,
+            length == _v.length && length == _r.length && length == _s.length,
             "Invalid signature length"
         );
         address[] memory seen = new address[](length);
         for (uint256 i = 0; i < length; i++) {
-            address signer = ecrecover(hash, v[i], r[i], s[i]);
+            address signer = ecrecover(_hash, _v[i], _r[i], _s[i]);
             require(isSigner[signer], "Invalid signer");
             for (uint256 j = 0; j < i; j++) {
                 require(signer != seen[j], "Duplicate signer");
@@ -344,9 +344,9 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
     function getBotBalanceOf(
         bytes32 _botId,
-        address account
+        address _account
     ) external view returns (uint256) {
-        return bots[_botId].balanceOf[account];
+        return bots[_botId].balanceOf[_account];
     }
 
     function getKeyPrice(
