@@ -5,3 +5,7 @@ out = "out"
 libs = ["lib"]
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
 solc = '0.8.22'
+
+[rpc_endpoints]
+# mainnet = "${RPC_MAINNET}"
+goerli = "${RPC_GOERLI}"
