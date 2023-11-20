@@ -4,14 +4,27 @@ pragma solidity 0.8.22;
 import "forge-std/Test.sol";
 import {CreatorTech} from "../../src/CreatorTech.sol";
 
-abstract contract SignData is Test {
+abstract contract TestHelper is Test {
     uint256 signersAmount = 3;
-    uint256[] public signerPrivateKeys = [0x1, 0x2, 0x3];
-    address[] public signers = [
-        vm.addr(signerPrivateKeys[0]),
-        vm.addr(signerPrivateKeys[1]),
-        vm.addr(signerPrivateKeys[2])
-    ];
+    address payable immutable DEV = payable(makeAddr("owner"));
+    address payable immutable ALICE = payable(makeAddr("alice"));
+    address payable immutable BOB = payable(makeAddr("bob"));
+
+    uint256[] public signerPrivateKeys = new uint256[](signersAmount);
+    address[] public signers = new address[](signersAmount);
+
+    CreatorTech internal creatorTech;
+
+    function setUp() public virtual {
+        signerPrivateKeys[0] = 0x1;
+        signerPrivateKeys[1] = 0x2;
+        signerPrivateKeys[2] = 0x3;
+        signers[0] = vm.addr(signerPrivateKeys[0]);
+        signers[1] = vm.addr(signerPrivateKeys[1]);
+        signers[2] = vm.addr(signerPrivateKeys[2]);
+        vm.prank(DEV);
+        creatorTech = new CreatorTech(signers);
+    }
 
     function signData(
         bytes32 signedHash

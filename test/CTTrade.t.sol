@@ -1,37 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import "forge-std/Test.sol";
+import "./utils/TestHelper.sol";
 
-import {SignData} from "../utils/SignData.sol";
-import {CreatorTech} from "../../src/CreatorTech.sol";
+contract CTTradeTest is TestHelper {
+    bytes32 botId;
+    address creatorAddr;
+    uint256 firstBuyAmount;
+    uint256 buyAmount;
 
-contract CreatorTechTest is Test, SignData {
-    address owner = address(0x123);
-    address trader = address(0x234);
-    bytes32 botId = bytes32(uint256(123));
-    address creatorAddr = address(0x1);
-    uint256 firstBuyAmount = 3;
-    uint256 buyAmount = 5;
-
-    CreatorTech creatorTech;
-
-    function setUp() public {
-        // signerPrivateKeys[0] = 0x1;
-        // signerPrivateKeys[1] = 0x2;
-        // signerPrivateKeys[2] = 0x3;
-        // signers[0] = vm.addr(signerPrivateKeys[0]);
-        // signers[1] = vm.addr(signerPrivateKeys[1]);
-        // signers[2] = vm.addr(signerPrivateKeys[2]);
-        vm.prank(owner);
-        vm.deal(owner, 1000 ether);
-        vm.deal(trader, 1000 ether);
-        // vm.deal(address(this), 1000 ether);
-        creatorTech = new CreatorTech(signers);
+    function setUp() public override {
+        super.setUp();
+        vm.deal(DEV, 1000 ether);
+        vm.deal(ALICE, 1000 ether);
+        // vm.prank(DEV);
+        botId = bytes32(uint256(123));
+        creatorAddr = address(0x1);
+        firstBuyAmount = 3;
+        buyAmount = 5;
     }
 
     function testFirstBuy_creatorAddrNotSet() public {
-        uint256 balanceBefore = owner.balance;
+        uint256 balanceBefore = DEV.balance;
         bytes32 signedHash = creatorTech._buildFirstBuySeparator(
             botId,
             firstBuyAmount
@@ -48,7 +38,7 @@ contract CreatorTechTest is Test, SignData {
         uint256 balanceAfter = balanceBefore +
             protocolFees +
             creatorTreasuryFees;
-        assertEq(owner.balance, balanceAfter);
+        assertEq(DEV.balance, balanceAfter);
     }
 
     function testBindCreatorAndClaim_setCreatorAddr() public {
@@ -80,13 +70,13 @@ contract CreatorTechTest is Test, SignData {
             signedHash
         );
         creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
-        vm.startPrank(trader);
+        vm.startPrank(ALICE);
         signedHash = creatorTech._buildBuySeparator(botId, buyAmount);
         (v, r, s) = signData(signedHash);
         creatorTech.buyKey{value: 1 ether}(botId, buyAmount, v, r, s);
         uint256 balanceOfBuyer = creatorTech.getBotBalanceOf(
             botId,
-            address(trader)
+            address(ALICE)
         );
         assertEq(balanceOfBuyer, buyAmount);
         vm.stopPrank();
@@ -103,15 +93,15 @@ contract CreatorTechTest is Test, SignData {
         creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
         signedHash = creatorTech._buildBuySeparator(botId, buyAmount);
         (v, r, s) = signData(signedHash);
-        vm.startPrank(trader);
+        vm.startPrank(ALICE);
         creatorTech.buyKey{value: 1 ether}(botId, buyAmount, v, r, s);
         uint256 balanceOfBuyer = creatorTech.getBotBalanceOf(
             botId,
-            address(trader)
+            address(ALICE)
         );
         assertEq(balanceOfBuyer, buyAmount);
         creatorTech.sellKey(botId, buyAmount);
-        balanceOfBuyer = creatorTech.getBotBalanceOf(botId, address(trader));
+        balanceOfBuyer = creatorTech.getBotBalanceOf(botId, address(ALICE));
         assertEq(balanceOfBuyer, 0);
         vm.stopPrank();
     }

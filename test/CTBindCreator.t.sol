@@ -2,23 +2,17 @@
 pragma solidity 0.8.22;
 
 import "forge-std/Test.sol";
-import {CreatorTech} from "../../src/CreatorTech.sol";
+import {CreatorTech} from "../src/CreatorTech.sol";
+import "./utils/TestHelper.sol";
 
-contract CreatorTechTest is Test {
-    bytes32 botId = bytes32(uint256(123));
-    address creatorAddr = address(0x1);
-    address[] public signers = new address[](3);
-    uint256[] public signerPrivateKeys = new uint256[](3);
-    CreatorTech creatorTech;
+contract CTBindCreatorTest is TestHelper {
+    bytes32 botId;
+    address creatorAddr;
 
-    function setUp() public {
-        signerPrivateKeys[0] = 0x1;
-        signerPrivateKeys[1] = 0x2;
-        signerPrivateKeys[2] = 0x3;
-        signers[0] = vm.addr(signerPrivateKeys[0]);
-        signers[1] = vm.addr(signerPrivateKeys[1]);
-        signers[2] = vm.addr(signerPrivateKeys[2]);
-        creatorTech = new CreatorTech(signers);
+    function setUp() public override {
+        super.setUp();
+        botId = bytes32(uint256(123));
+        creatorAddr = address(0x1);
     }
 
     function testBindCreatorAndClaim_withoutUnclaimedFees() public {
