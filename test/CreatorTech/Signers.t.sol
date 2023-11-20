@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import "forge-std/Test.sol";
-import {CreatorTech} from "../src/CreatorTech.sol";
+import {CreatorTech} from "../../src/CreatorTech.sol";
 
 contract CreatorTechTest is Test {
     function setUp() public {}

@@ -25,10 +25,68 @@ v0.1.1
 
 ## State-Changing Functions (Transactions)
 
-- `firstBuy(bytes32 _botId, uint256 _amount, uint8[] _v, bytes32[] _r, bytes32[] _s)`: Initializes the first buy for a bot.
+### buyKey Function
+
 - `buyKey(bytes32 _botId, uint256 _amount, uint8[] _v, bytes32[] _r, bytes32[] _s)`: Allows purchase of keys for a bot.
+- **Parameters**:
+  - `botId`: `bytes32` - The unique identifier of the bot for which keys are being purchased.
+  - `amount`: `uint256` - The number of keys to be purchased.
+  - `v`, `r`, `s`: `uint8[]`, `bytes32[]`, `bytes32[]` - The signature components to authorize the transaction.
+- **Restrictions**:
+  - Must have sufficient ETH for the purchase and fees.
+  - The bot must have had its first buy event.
+- **Results**:
+  - Keys are added to the buyer's account for the given bot.
+  - Protocol fees are distributed.
+  - A `Trade` event is emitted detailing the transaction.
+
+### sellKey Function
+
 - `sellKey(bytes32 _botId, uint256 _amount)`: Enables selling of keys.
+- **Parameters**:
+  - `botId`: `bytes32` - The unique identifier of the bot whose keys are being sold.
+  - `amount`: `uint256` - The number of keys to sell.
+- **Restrictions**:
+  - The caller must own the keys they are attempting to sell.
+  - The bot must have completed its first buy.
+- **Results**:
+
+  - Keys are removed from the seller's account.
+
+  - ETH is transferred to the seller, minus fees.
+  - A `Trade` event is emitted detailing the transaction.
+
+### firstBuy Function
+
+- `firstBuy(bytes32 _botId, uint256 _amount, uint8[] _v, bytes32[] _r, bytes32[] _s)`: Initializes the first buy for a bot.
+- **Parameters**:
+  - `botId`: `bytes32` - The unique identifier of the bot being initialized.
+  - `amount`: `uint256` - The number of keys to be purchased.
+  - `v`, `r`, `s`: `uint8[]`, `bytes32[]`, `bytes32[]` - The signature components to authorize the transaction.
+- **Restrictions**:
+  - Can only be called once for each bot.
+  - Caller must provide sufficient ETH for the keys and fees.
+- **Results**:
+  - The buyer receives `amount` keys, and an additional key is reserved for the bot's owner.
+  - The bot is initialized and marked as having completed its first buy.
+  - A `Trade` event is logged with the transaction details.
+
+### bindCreatorAndClaim Function
+
 - `bindCreatorAndClaim(bytes32 _botId, address _creatorAddr, uint8[] _v, bytes32[] _r, bytes32[] _s)`: Binds a creator to a bot and claims any unclaimed fees.
+- **Parameters**:
+  - `botId`: `bytes32` - The unique identifier of the bot to which a creator is being bound.
+  - `creatorAddr`: `address` - The Ethereum address of the creator being bound to the bot.
+  - `v`, `r`, `s`: `uint8[]`, `bytes32[]`, `bytes32[]` - The signature components for operation authorization.
+- **Restrictions**:
+
+  - `creatorAddr` cannot be the zero address.
+  - A bot can only be bound to one creator address, and once set, it cannot be changed.
+
+- **Results**:
+  - Creator is bound to the bot.
+  - Any unclaimed fees are transferred to the creator.
+  - A `CreatorBound` event is emitted upon successful operation.
 
 ## Events
 
