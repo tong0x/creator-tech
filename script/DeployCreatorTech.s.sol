@@ -5,13 +5,14 @@ import {Script, console2} from "forge-std/Script.sol";
 import {CreatorTech} from "../src/CreatorTech.sol";
 
 contract DeployScript is Script {
-    address[] signers;
+    uint256[] public signerPrivateKeys = [0x1, 0x2, 0x3];
+    address[] public signers = [
+        vm.addr(signerPrivateKeys[0]),
+        vm.addr(signerPrivateKeys[1]),
+        vm.addr(signerPrivateKeys[2])
+    ];
 
-    function setUp() public {
-        signers.push(address(0x1234567890123456789012345678901234567890));
-        signers.push(address(0x1234567890123456789012345678901234567891));
-        signers.push(address(0x1234567890123456789012345678901234567892));
-    }
+    function setUp() public {}
 
     function run() public {
         vm.startBroadcast();

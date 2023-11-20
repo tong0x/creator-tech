@@ -149,7 +149,7 @@ contract CreatorTechTest is Test {
             (supply + 1 + amount) *
             (2 * (supply + amount) + 1)) / 6;
         uint256 summation = sum2 - sum1;
-        return (summation * 1 ether) / 43370;
+        return (summation * 1 ether) / 100000;
     }
 
     function testGetKeyPrice_Equivalence(

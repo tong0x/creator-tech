@@ -10,7 +10,7 @@ contract CreatorTechTest is Test, SignData {
     address trader = address(0x000aaa);
     bytes32 botId =
         bytes32(
-            0x0000000000000000000000000000000000000000000000000000000000007777
+            0x0000000000000000000000000000000000000000000000000000000000001212
         );
     uint256 firstBuyAmount = 1;
     address creatorAddr = address(0x1);
@@ -18,13 +18,7 @@ contract CreatorTechTest is Test, SignData {
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("goerli"));
-        creatorTech = CreatorTech(0xae948882c84204f7d8F370F4940CFc27ac8da880);
-        // signerPrivateKeys[0] = 0x1;
-        // signerPrivateKeys[1] = 0x2;
-        // signerPrivateKeys[2] = 0x3;
-        // signers[0] = vm.addr(signerPrivateKeys[0]);
-        // signers[1] = vm.addr(signerPrivateKeys[1]);
-        // signers[2] = vm.addr(signerPrivateKeys[2]);
+        creatorTech = CreatorTech(0x6C131A2cF1502c08E6a9B289C6a510FfcE64Fbc7);
         vm.deal(trader, 1000 ether);
     }
 
@@ -45,8 +39,7 @@ contract CreatorTechTest is Test, SignData {
         uint256 keyPrice = creatorTech.getKeyPrice(0, firstBuyAmount + 1);
         uint256 protocolFees = (keyPrice * creatorTech.protocolFee()) / 1 ether;
         uint256 creatorTreasuryFees = (keyPrice *
-            creatorTech.creatorTreasuryFee()) / 1 ether;
-        // uint256 creatorFees = (keyPrice * creatorTech.creatorFee()) / 1 ether;
+            creatorTech.buyTreasuryFee()) / 1 ether;
         uint256 balanceAfter = balanceBefore +
             protocolFees +
             creatorTreasuryFees;
@@ -54,13 +47,12 @@ contract CreatorTechTest is Test, SignData {
         assertEq(creatorTech.getBotBalanceOf(botId, address(trader)), 1);
     }
 
-    function testBindCreatorAndClaim_setCreatorAddr() public {}
-
-    function testBindCreatorAndClaim_insufficientPayment() public {}
-
-    function testBindCreatorAndClaim_unableToSendFunds() public {}
-
-    function testBuyKey() public {}
-
-    function testSellKey() public {}
+    function printSignData() public view {
+        bytes32 signedHash = creatorTech._buildFirstBuySeparator(botId, 1);
+        console2.log("First Buy Signature:");
+        signData(signedHash);
+        signedHash = creatorTech._buildBuySeparator(botId, 1);
+        console2.log("Buy Signature:");
+        signData(signedHash);
+    }
 }

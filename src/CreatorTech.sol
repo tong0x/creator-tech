@@ -39,8 +39,10 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     address public creatorTreasury;
 
     uint256 public protocolFee;
-    uint256 public creatorTreasuryFee;
-    uint256 public creatorFee;
+    uint256 public buyTreasuryFee;
+    uint256 public buyCreatorFee;
+    uint256 public sellTreasuryFee;
+    uint256 public sellCreatorFee;
     uint256 public tradeIndex;
     address[] public signers;
     mapping(bytes32 => Bot) public bots; // Bot ID => Bot Info
@@ -72,9 +74,11 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         protocolFeeRecipient = msg.sender;
         creatorTreasury = msg.sender;
 
-        protocolFee = 0.02 ether; // 2%
-        creatorTreasuryFee = 0.05 ether; // 5%
-        creatorFee = 0.03 ether; // 3%
+        protocolFee = 0.03 ether; // 3%
+        buyTreasuryFee = 0.03 ether; // 3%
+        buyCreatorFee = 0.06 ether; // 6%
+        sellTreasuryFee = 0.06 ether; // 6%
+        sellCreatorFee = 0.03 ether; // 3%
     }
 
     struct TradeParameters {
@@ -82,7 +86,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         uint256 price;
         uint256 protocolFee;
         uint256 creatorFee;
-        uint256 creatorTreasuryFee;
+        uint256 treasuryFee;
         bool success;
     }
 
@@ -101,15 +105,13 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         TradeParameters memory params;
         params.price = getKeyPrice(bot.totalSupply, _amount + 1);
         params.protocolFee = (params.price * protocolFee) / 1 ether;
-        params.creatorFee = (params.price * creatorFee) / 1 ether;
-        params.creatorTreasuryFee =
-            (params.price * creatorTreasuryFee) /
-            1 ether;
+        params.creatorFee = (params.price * buyCreatorFee) / 1 ether;
+        params.treasuryFee = (params.price * buyTreasuryFee) / 1 ether;
         params.value =
             params.price +
             params.protocolFee +
             params.creatorFee +
-            params.creatorTreasuryFee;
+            params.treasuryFee;
         require(msg.value >= params.value, "Insufficient payment");
         bot.balanceOf[msg.sender] += _amount;
         bot.totalSupply += _amount + 1;
@@ -127,9 +129,9 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             value: params.protocolFee
         }(new bytes(0));
         require(params.success, "Unable to send funds");
-        (params.success, ) = creatorTreasury.call{
-            value: params.creatorTreasuryFee
-        }(new bytes(0));
+        (params.success, ) = creatorTreasury.call{value: params.treasuryFee}(
+            new bytes(0)
+        );
         require(params.success, "Unable to send funds");
 
         emit Trade(
@@ -161,15 +163,13 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         require(bot.firstBuy == true, "First buy has not occurred");
         params.price = getKeyPrice(bot.totalSupply, _amount);
         params.protocolFee = (params.price * protocolFee) / 1 ether;
-        params.creatorFee = (params.price * creatorFee) / 1 ether;
-        params.creatorTreasuryFee =
-            (params.price * creatorTreasuryFee) /
-            1 ether;
+        params.creatorFee = (params.price * buyCreatorFee) / 1 ether;
+        params.treasuryFee = (params.price * buyTreasuryFee) / 1 ether;
         params.value =
             params.price +
             params.protocolFee +
             params.creatorFee +
-            params.creatorTreasuryFee;
+            params.treasuryFee;
         require(msg.value >= params.value, "Insufficient payment");
         bot.balanceOf[msg.sender] += _amount;
         bot.totalSupply += _amount;
@@ -186,9 +186,9 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             value: params.protocolFee
         }(new bytes(0));
         require(params.success, "Unable to send funds");
-        (params.success, ) = creatorTreasury.call{
-            value: params.creatorTreasuryFee
-        }(new bytes(0));
+        (params.success, ) = creatorTreasury.call{value: params.treasuryFee}(
+            new bytes(0)
+        );
         require(params.success, "Unable to send funds");
 
         emit Trade(
@@ -214,15 +214,13 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         require(bot.balanceOf[msg.sender] >= _amount, "Insufficient passes");
         params.price = getKeyPrice(bot.totalSupply - _amount, _amount);
         params.protocolFee = (params.price * protocolFee) / 1 ether;
-        params.creatorFee = (params.price * creatorFee) / 1 ether;
-        params.creatorTreasuryFee =
-            (params.price * creatorTreasuryFee) /
-            1 ether;
+        params.creatorFee = (params.price * sellCreatorFee) / 1 ether;
+        params.treasuryFee = (params.price * sellTreasuryFee) / 1 ether;
         params.value =
             params.price -
             params.protocolFee -
             params.creatorFee -
-            params.creatorTreasuryFee;
+            params.treasuryFee;
         bot.balanceOf[msg.sender] -= _amount;
         bot.totalSupply -= _amount;
         if (bot.creatorAddr == address(0)) {
@@ -239,9 +237,9 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             value: params.protocolFee
         }(new bytes(0));
         require(params.success, "Unable to send funds");
-        (params.success, ) = creatorTreasury.call{
-            value: params.creatorTreasuryFee
-        }(new bytes(0));
+        (params.success, ) = creatorTreasury.call{value: params.treasuryFee}(
+            new bytes(0)
+        );
         require(params.success, "Unable to send funds");
 
         emit Trade(
@@ -324,14 +322,12 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         protocolFee = _protocolFee;
     }
 
-    function setCreatorTreasuryFee(
-        uint256 _creatorTreasuryFee
-    ) external onlyOwner {
-        creatorTreasuryFee = _creatorTreasuryFee;
+    function setCreatorTreasuryFee(uint256 _buyTreasuryFee) external onlyOwner {
+        buyTreasuryFee = _buyTreasuryFee;
     }
 
-    function setCreatorFee(uint256 _creatorFee) external onlyOwner {
-        creatorFee = _creatorFee;
+    function setCreatorFee(uint256 _buyCreatorFee) external onlyOwner {
+        buyCreatorFee = _buyCreatorFee;
     }
 
     function _sumOfSquares(uint256 _n) internal pure returns (uint256) {
@@ -356,7 +352,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         uint256 preTradeSum = _sumOfSquares(_currentSupply);
         uint256 postTradeSum = _sumOfSquares(_currentSupply + _keyAmount);
         uint256 diffSum = postTradeSum - preTradeSum;
-        return (diffSum * 1 ether) / 43370;
+        return (diffSum * 1 ether) / 100000;
     }
 
     function _buildBindSeparator(

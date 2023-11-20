@@ -12,6 +12,12 @@ v0.1.0
 - **Contract Address on Testnet (Goerli):** [0xae948882c84204f7d8F370F4940CFc27ac8da880](https://goerli.etherscan.io/address/0xae948882c84204f7d8f370f4940cfc27ac8da880)
 - **ABI:** You can obtain the ABI from [here](../out/CreatorTech.sol/CreatorTech.json).
 
+v0.1.1
+
+- **Contract Address on Mainnet (Ethereum):**
+- **Contract Address on Testnet (Goerli):** [0x6C131A2cF1502c08E6a9B289C6a510FfcE64Fbc7](https://goerli.etherscan.io/address/0x6C131A2cF1502c08E6a9B289C6a510FfcE64Fbc7)
+- **ABI:** You can obtain the ABI from [here](../out/CreatorTech.sol/CreatorTech.json).
+
 ## Read-Only Functions
 
 - `getBotCreatorAddr(bytes32 _botId)`: Returns the creator's address associated with the given bot ID.
@@ -31,6 +37,21 @@ v0.1.0
 - `CreatorBound(bytes32 indexed creatorId, address creatorAddr, uint256 timestamp)`: Emitted when a creator is bound to a bot.
 - `RewardClaimed(address indexed creatorAddr, uint256 timestamp, uint256 claimIdx, uint256 amount)`: Emitted when a reward is claimed.
 - `Trade(TradeEvent tradeEvent)`: Emitted on a trade event.
+
+```
+    struct TradeEvent {
+        uint256 eventIndex;
+        uint256 timestamp;
+        address trader;
+        bytes32 bot;
+        bool isBuy;
+        bool isFirstBuy;
+        uint256 keyAmount;
+        uint256 ethAmount;
+        uint256 traderBalance;
+        uint256 keySupply;
+    }
+```
 
 ## Modifier Functions
 

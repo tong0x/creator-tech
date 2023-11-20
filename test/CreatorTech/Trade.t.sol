@@ -43,7 +43,7 @@ contract CreatorTechTest is Test, SignData {
         uint256 keyPrice = creatorTech.getKeyPrice(0, firstBuyAmount + 1);
         uint256 protocolFees = (keyPrice * creatorTech.protocolFee()) / 1 ether;
         uint256 creatorTreasuryFees = (keyPrice *
-            creatorTech.creatorTreasuryFee()) / 1 ether;
+            creatorTech.buyTreasuryFee()) / 1 ether;
         // uint256 creatorFees = (keyPrice * creatorTech.creatorFee()) / 1 ether;
         uint256 balanceAfter = balanceBefore +
             protocolFees +
