@@ -24,7 +24,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     struct TradeEvent {
-        uint256 eventIndex;
+        uint256 tradeIdx;
         uint256 timestamp;
         address trader;
         bytes32 bot;
@@ -45,6 +45,8 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     uint256 public sellCreatorFee;
     uint256 public totalReward;
     uint256 public tradeIndex;
+    uint256 public claimRewardIndex;
+    uint256 public claimFeeIndex;
     address[] public signers;
     mapping(bytes32 => Bot) public bots; // Bot ID => Bot Info
     mapping(address => bool) public isSigner;
@@ -54,15 +56,23 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
     event SignerAdded(address indexed signer);
     event SignerRemoved(address indexed signer);
+    event ClaimReward(
+        uint256 indexed claimRewardIdx,
+        uint256 indexed rootId,
+        address indexed to,
+        uint256 amount,
+        uint256 totalRewardRemain,
+        uint256 timestamp
+    );
     event CreatorBound(
         bytes32 indexed creatorId,
         address creatorAddr,
         uint256 timestamp
     );
-    event RewardClaimed(
+    event ClaimCreatorFee(
         address indexed creatorAddr,
         uint256 timestamp,
-        uint256 claimIdx,
+        uint256 claimFeeIdx,
         uint256 amount
     );
     event Trade(TradeEvent tradeEvent);
@@ -135,7 +145,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
         emit Trade(
             TradeEvent({
-                eventIndex: tradeIndex++,
+                tradeIdx: tradeIndex++,
                 timestamp: block.timestamp,
                 trader: msg.sender,
                 bot: _botId,
@@ -189,7 +199,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
         emit Trade(
             TradeEvent({
-                eventIndex: tradeIndex++,
+                tradeIdx: tradeIndex++,
                 timestamp: block.timestamp,
                 trader: msg.sender,
                 bot: _botId,
@@ -237,7 +247,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
         emit Trade(
             TradeEvent({
-                eventIndex: tradeIndex++,
+                tradeIdx: tradeIndex++,
                 timestamp: block.timestamp,
                 trader: msg.sender,
                 bot: _botId,
@@ -251,7 +261,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         );
     }
 
-    function claim(
+    function claimReward(
         uint256 _rootId,
         address _to,
         uint256 _amount,
@@ -273,6 +283,15 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         hasClaimed[_rootId][_to] = true;
         (bool success, ) = _to.call{value: _amount}(new bytes(0));
         require(success, "Unable to send funds");
+
+        emit ClaimReward(
+            claimRewardIndex++,
+            _rootId,
+            _to,
+            _amount,
+            totalReward,
+            block.timestamp
+        );
     }
 
     function addSigner(address _signer) public onlyOwner {
@@ -428,7 +447,12 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             bot.unclaimedFees = 0;
             (bool success, ) = _creatorAddr.call{value: amount}("");
             require(success, "Transfer failed");
-            emit RewardClaimed(_creatorAddr, block.timestamp, 0, amount);
+            emit ClaimCreatorFee(
+                _creatorAddr,
+                block.timestamp,
+                claimFeeIndex++,
+                amount
+            );
         }
         if (bot.firstBuy) {
             bot.balanceOf[address(this)] -= 1;

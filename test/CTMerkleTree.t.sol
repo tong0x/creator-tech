@@ -42,13 +42,11 @@ contract CTSignerTest is TestHelper {
         proof[0] = leaves[0];
         proof[1] = leaves2[1];
 
-        // Upload Merkle root on chain
+        // Update Merkle root on contract
         vm.prank(DEV);
         creatorTech.setMerkleRoot(0, merkleRoot);
 
         // Verify the Merkle proof
-        creatorTech.claim(0, BOB, 20, proof);
+        creatorTech.claimReward(0, BOB, 20, proof);
     }
-
-    function testClaimReward() public {}
 }
