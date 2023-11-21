@@ -3,12 +3,15 @@ pragma solidity 0.8.22;
 
 import "forge-std/Test.sol";
 import {CreatorTech} from "../../src/CreatorTech.sol";
+import {MerkleProof} from "../../lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 abstract contract TestHelper is Test {
     uint256 signersAmount = 3;
     address payable immutable DEV = payable(makeAddr("owner"));
     address payable immutable ALICE = payable(makeAddr("alice"));
     address payable immutable BOB = payable(makeAddr("bob"));
+    address payable immutable CINDY = payable(makeAddr("Cindy"));
+    address payable immutable DAISY = payable(makeAddr("Daisy"));
 
     uint256[] public signerPrivateKeys = new uint256[](signersAmount);
     address[] public signers = new address[](signersAmount);
@@ -55,6 +58,28 @@ abstract contract TestHelper is Test {
         console2.log("bytes32[%d] s:", s.length);
         for (uint i = 0; i < s.length; i++) {
             console.logBytes32(s[i]);
+        }
+    }
+
+    /**
+     * @dev Sorts the pair (a, b) and hashes the result.
+     */
+    function _hashPair(bytes32 a, bytes32 b) public pure returns (bytes32) {
+        return a < b ? _efficientHash(a, b) : _efficientHash(b, a);
+    }
+
+    /**
+     * @dev Implementation of keccak256(abi.encode(a, b)) that doesn't allocate or expand memory.
+     */
+    function _efficientHash(
+        bytes32 a,
+        bytes32 b
+    ) public pure returns (bytes32 value) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(0x00, a)
+            mstore(0x20, b)
+            value := keccak256(0x00, 0x40)
         }
     }
 }

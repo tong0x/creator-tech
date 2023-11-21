@@ -32,12 +32,8 @@ contract CTTradeTest is TestHelper {
         creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
         uint256 keyPrice = creatorTech.getKeyPrice(0, firstBuyAmount + 1);
         uint256 protocolFees = (keyPrice * creatorTech.protocolFee()) / 1 ether;
-        uint256 creatorTreasuryFees = (keyPrice *
-            creatorTech.buyTreasuryFee()) / 1 ether;
         // uint256 creatorFees = (keyPrice * creatorTech.creatorFee()) / 1 ether;
-        uint256 balanceAfter = balanceBefore +
-            protocolFees +
-            creatorTreasuryFees;
+        uint256 balanceAfter = balanceBefore + protocolFees;
         assertEq(DEV.balance, balanceAfter);
     }
 

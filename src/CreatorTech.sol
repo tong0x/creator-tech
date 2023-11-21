@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {MerkleProof} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     // TODO: Add fields related to rewards
@@ -36,18 +37,20 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     address public protocolFeeRecipient;
-    address public creatorTreasury;
 
     uint256 public protocolFee;
     uint256 public buyTreasuryFee;
     uint256 public buyCreatorFee;
     uint256 public sellTreasuryFee;
     uint256 public sellCreatorFee;
+    uint256 public totalReward;
     uint256 public tradeIndex;
     address[] public signers;
     mapping(bytes32 => Bot) public bots; // Bot ID => Bot Info
     mapping(address => bool) public isSigner;
     mapping(address => uint256) public signerIdx;
+    mapping(uint256 => bytes32) public roots; // Reward Distribution Index => Merkle Root
+    mapping(uint256 => mapping(address => bool)) hasClaimed; // Reward Distribution Index => Address => Has Claimed
 
     event SignerAdded(address indexed signer);
     event SignerRemoved(address indexed signer);
@@ -72,7 +75,6 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         }
 
         protocolFeeRecipient = msg.sender;
-        creatorTreasury = msg.sender;
 
         protocolFee = 0.03 ether; // 3%
         buyTreasuryFee = 0.03 ether; // 3%
@@ -129,10 +131,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             value: params.protocolFee
         }(new bytes(0));
         require(params.success, "Unable to send funds");
-        (params.success, ) = creatorTreasury.call{value: params.treasuryFee}(
-            new bytes(0)
-        );
-        require(params.success, "Unable to send funds");
+        totalReward += params.treasuryFee;
 
         emit Trade(
             TradeEvent({
@@ -186,10 +185,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             value: params.protocolFee
         }(new bytes(0));
         require(params.success, "Unable to send funds");
-        (params.success, ) = creatorTreasury.call{value: params.treasuryFee}(
-            new bytes(0)
-        );
-        require(params.success, "Unable to send funds");
+        totalReward += params.treasuryFee;
 
         emit Trade(
             TradeEvent({
@@ -237,10 +233,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             value: params.protocolFee
         }(new bytes(0));
         require(params.success, "Unable to send funds");
-        (params.success, ) = creatorTreasury.call{value: params.treasuryFee}(
-            new bytes(0)
-        );
-        require(params.success, "Unable to send funds");
+        totalReward += params.treasuryFee;
 
         emit Trade(
             TradeEvent({
@@ -256,6 +249,30 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
                 keySupply: bot.totalSupply
             })
         );
+    }
+
+    function claim(
+        uint256 _rootId,
+        address _to,
+        uint256 _amount,
+        bytes32[] calldata _proof
+    ) external {
+        require(
+            !hasClaimed[_rootId][_to],
+            "Address has already claimed rewards"
+        );
+
+        bytes32 leaf = keccak256(abi.encodePacked(_to, _amount));
+        require(
+            MerkleProof.verify(_proof, roots[_rootId], leaf),
+            "Invalid Merkle proof"
+        );
+        require(totalReward >= _amount, "Insufficient rewards");
+        totalReward -= _amount;
+
+        hasClaimed[_rootId][_to] = true;
+        (bool success, ) = _to.call{value: _amount}(new bytes(0));
+        require(success, "Unable to send funds");
     }
 
     function addSigner(address _signer) public onlyOwner {
@@ -314,10 +331,6 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         protocolFeeRecipient = _protocolFeeRecipient;
     }
 
-    function setCreatorTreasury(address _creatorTreasury) external onlyOwner {
-        creatorTreasury = _creatorTreasury;
-    }
-
     function setProtocolFee(uint256 _protocolFee) external onlyOwner {
         protocolFee = _protocolFee;
     }
@@ -336,6 +349,10 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
     function setSellCreatorFee(uint256 _sellCreatorFee) external onlyOwner {
         sellCreatorFee = _sellCreatorFee;
+    }
+
+    function setMerkleRoot(uint256 _rootId, bytes32 _root) external onlyOwner {
+        roots[_rootId] = _root;
     }
 
     function _sumOfSquares(uint256 _n) internal pure returns (uint256) {
