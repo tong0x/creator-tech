@@ -378,8 +378,22 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         return (_n == 0) ? 0 : (_n * (_n + 1) * (2 * _n + 1)) / 6;
     }
 
+    function getBotFirstBuy(bytes32 _botId) external view returns (bool) {
+        return bots[_botId].firstBuy;
+    }
+
     function getBotCreatorAddr(bytes32 _botId) external view returns (address) {
         return bots[_botId].creatorAddr;
+    }
+
+    function getBotTotalSupply(bytes32 _botId) external view returns (uint256) {
+        return bots[_botId].totalSupply;
+    }
+
+    function getBotUnclaimedFees(
+        bytes32 _botId
+    ) external view returns (uint256) {
+        return bots[_botId].unclaimedFees;
     }
 
     function getBotBalanceOf(
