@@ -322,12 +322,20 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         protocolFee = _protocolFee;
     }
 
-    function setCreatorTreasuryFee(uint256 _buyTreasuryFee) external onlyOwner {
+    function setBuyTreasuryFee(uint256 _buyTreasuryFee) external onlyOwner {
         buyTreasuryFee = _buyTreasuryFee;
     }
 
-    function setCreatorFee(uint256 _buyCreatorFee) external onlyOwner {
+    function setBuyCreatorFee(uint256 _buyCreatorFee) external onlyOwner {
         buyCreatorFee = _buyCreatorFee;
+    }
+
+    function setSellTreasuryFee(uint256 _sellTreasuryFee) external onlyOwner {
+        sellTreasuryFee = _sellTreasuryFee;
+    }
+
+    function setSellCreatorFee(uint256 _sellCreatorFee) external onlyOwner {
+        sellCreatorFee = _sellCreatorFee;
     }
 
     function _sumOfSquares(uint256 _n) internal pure returns (uint256) {
