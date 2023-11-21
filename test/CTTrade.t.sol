@@ -57,10 +57,6 @@ contract CTTradeTest is TestHelper {
         assertEq(getCreatorAddr, creatorAddr);
     }
 
-    function testBindCreatorAndClaim_insufficientPayment() public {}
-
-    function testBindCreatorAndClaim_unableToSendFunds() public {}
-
     function testBuyKey() public {
         bytes32 signedHash = creatorTech._buildFirstBuySeparator(
             botId,
