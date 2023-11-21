@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import "forge-std/Test.sol";
 import {CreatorTech} from "../src/CreatorTech.sol";
 
-contract CreatorTechTest is Test {
+contract CTSignerTest is Test {
     function setUp() public {}
 
     function testAddSigners_MultipleSignersNoDuplicates() public {
@@ -149,7 +149,7 @@ contract CreatorTechTest is Test {
             (supply + 1 + amount) *
             (2 * (supply + amount) + 1)) / 6;
         uint256 summation = sum2 - sum1;
-        return (summation * 1 ether) / 43370;
+        return (summation * 1 ether) / 100000;
     }
 
     function testGetKeyPrice_Equivalence(
