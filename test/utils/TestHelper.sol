@@ -6,19 +6,22 @@ import {CreatorTech} from "../../src/CreatorTech.sol";
 import {MerkleProof} from "../../lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 abstract contract TestHelper is Test {
-    uint256 signersAmount = 3;
+    uint256 signersAmount;
     address payable immutable DEV = payable(makeAddr("owner"));
     address payable immutable ALICE = payable(makeAddr("alice"));
     address payable immutable BOB = payable(makeAddr("bob"));
     address payable immutable CINDY = payable(makeAddr("Cindy"));
     address payable immutable DAISY = payable(makeAddr("Daisy"));
 
-    uint256[] public signerPrivateKeys = new uint256[](signersAmount);
-    address[] public signers = new address[](signersAmount);
+    uint256[] public signerPrivateKeys;
+    address[] public signers;
 
     CreatorTech internal creatorTech;
 
     function setUp() public virtual {
+        signersAmount = 3;
+        signerPrivateKeys = new uint256[](signersAmount);
+        signers = new address[](signersAmount);
         signerPrivateKeys[0] = 0x1;
         signerPrivateKeys[1] = 0x2;
         signerPrivateKeys[2] = 0x3;

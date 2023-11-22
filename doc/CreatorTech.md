@@ -26,6 +26,18 @@ v0.1.2
 - **Contract Address on Testnet (Goerli):** [0x2361a33d89D923A6dd63D6f582beF7A8B45DFc0B](https://goerli.etherscan.io/address/0x2361a33d89D923A6dd63D6f582beF7A8B45DFc0B)
 - **ABI:** You can obtain the ABI from [here](https://goerli.etherscan.io/address/0x2361a33d89D923A6dd63D6f582beF7A8B45DFc0B#code).
 
+## v0.1.2 Contract Test Data for `firstBuy` Function
+
+- **Transaction Value:** 0.000056 ETH (cost for 2 keys).
+- **Parameters:**
+  - `_botId`: `0x0000000000000000000000000000000000000000000000000000000000000001`
+  - `_amount`: `1`
+  - `_v`: `27`
+  - `_r`: `0x3b90399cd0d0cc04d707a340e887ab1ab95dc20f8f90a3b42cb8b63eb0c78a9e`
+  - `_s`: `0x7f8e595039980449b5ee67181e42559833b36d07fc22bd5f2625473f41f813d7`
+
+This test data relates to the `firstBuy` function, which initializes the first purchase of a bot's key, and includes all necessary parameters for the transaction.
+
 ## Read-Only Functions
 
 - `getBotTotalSupply(bytes32 _botId)`: Returns the total supply of keys for a given bot ID.
