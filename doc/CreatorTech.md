@@ -26,6 +26,14 @@ v0.1.2
 - **Contract Address on Testnet (Goerli):** [0x2361a33d89D923A6dd63D6f582beF7A8B45DFc0B](https://goerli.etherscan.io/address/0x2361a33d89D923A6dd63D6f582beF7A8B45DFc0B)
 - **ABI:** You can obtain the ABI from [here](https://goerli.etherscan.io/address/0x2361a33d89D923A6dd63D6f582beF7A8B45DFc0B#code).
 
+v0.1.3
+
+- **Signer Private Key:**`99b07ead3e50245003d7c1c6e5ac5fcc5ac15fd2ddfda22a6a4f423b90e61143`
+- **Signer Address:**`0x55B0023B2f59881f7125f183953a61ee3069833c`
+- **Contract Address on Mainnet (Ethereum):**
+- **Contract Address on Testnet (Goerli):** [0xF70B725626f34Ae675a1B5a08eED38033049598B](https://goerli.etherscan.io/address/0xF70B725626f34Ae675a1B5a08eED38033049598B)
+- **ABI:** You can obtain the ABI from [here](https://goerli.etherscan.io/address/0xF70B725626f34Ae675a1B5a08eED38033049598B#code).
+
 ## Test Data
 
 v0.1.2 Contract Test Data for `firstBuy` Function
