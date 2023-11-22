@@ -26,7 +26,7 @@ v0.1.2
 - **Contract Address on Testnet (Goerli):** [0x2361a33d89D923A6dd63D6f582beF7A8B45DFc0B](https://goerli.etherscan.io/address/0x2361a33d89D923A6dd63D6f582beF7A8B45DFc0B)
 - **ABI:** You can obtain the ABI from [here](https://goerli.etherscan.io/address/0x2361a33d89D923A6dd63D6f582beF7A8B45DFc0B#code).
 
-## v0.1.2 Contract Test Data for `firstBuy` Function
+v0.1.2 Contract Test Data for `firstBuy` Function
 
 - **Transaction Value:** 0.000056 ETH (cost for 2 keys).
 - **Parameters:**
