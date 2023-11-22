@@ -20,6 +20,7 @@ contract CTBindCreatorTest is TestHelper {
         address ctCreatorAddr = creatorTech.getBotCreatorAddr(botId);
         assertEq(ctCreatorAddr, ALICE);
         assertEq(ALICE.balance, 0);
+        assertEq(creatorTech.getBotBalanceOf(botId, ALICE), 0);
     }
 
     function testBindCreatorAndClaim_haveUnclaimedFees() public {
@@ -40,5 +41,8 @@ contract CTBindCreatorTest is TestHelper {
         creatorTech.bindCreatorAndClaim(botId, ALICE, v, r, s);
         assertGe(ALICE.balance, 0);
         assertEq(ALICE.balance, fee);
+        assertEq(creatorTech.getBotBalanceOf(botId, address(this)), 3);
+        assertEq(creatorTech.getBotBalanceOf(botId, ALICE), 1);
+        assertEq(creatorTech.getBotUnclaimedFees(botId), 0);
     }
 }
