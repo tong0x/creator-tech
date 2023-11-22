@@ -10,13 +10,13 @@ v0.1.0
 
 - **Contract Address on Mainnet (Ethereum):**
 - **Contract Address on Testnet (Goerli):** [0xae948882c84204f7d8F370F4940CFc27ac8da880](https://goerli.etherscan.io/address/0xae948882c84204f7d8f370f4940cfc27ac8da880)
-- **ABI:** You can obtain the ABI from [here](../out/CreatorTech.sol/CreatorTech.json).
+- **ABI:** You can obtain the ABI from [here](https://goerli.etherscan.io/address/0xae948882c84204f7d8f370f4940cfc27ac8da880#code).
 
 v0.1.1
 
 - **Contract Address on Mainnet (Ethereum):**
 - **Contract Address on Testnet (Goerli):** [0x6C131A2cF1502c08E6a9B289C6a510FfcE64Fbc7](https://goerli.etherscan.io/address/0x6C131A2cF1502c08E6a9B289C6a510FfcE64Fbc7)
-- **ABI:** You can obtain the ABI from [here](../out/CreatorTech.sol/CreatorTech.json).
+- **ABI:** You can obtain the ABI from [here](https://goerli.etherscan.io/address/0x6C131A2cF1502c08E6a9B289C6a510FfcE64Fbc7#code).
 
 ## Read-Only Functions
 
