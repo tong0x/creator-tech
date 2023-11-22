@@ -27,6 +27,7 @@ contract CTBindCreatorTest is TestHelper {
         uint256 firstBuyAmount = 3;
         bytes32 signedHash = creatorTech._buildFirstBuySeparator(
             botId,
+            address(this),
             firstBuyAmount
         );
         (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) = signData(

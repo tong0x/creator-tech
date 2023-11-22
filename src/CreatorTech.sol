@@ -109,7 +109,12 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         bytes32[] calldata _r,
         bytes32[] calldata _s
     ) external payable nonReentrant {
-        recover(_buildFirstBuySeparator(_botId, _amount), _v, _r, _s);
+        recover(
+            _buildFirstBuySeparator(_botId, msg.sender, _amount),
+            _v,
+            _r,
+            _s
+        );
         Bot storage bot = bots[_botId];
         require(bot.firstBuy == false, "First buy already occurred");
         require(bot.totalSupply == 0, "Bot already initialized");
@@ -166,7 +171,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         bytes32[] calldata _r,
         bytes32[] calldata _s
     ) external payable nonReentrant {
-        recover(_buildBuySeparator(_botId, _amount), _v, _r, _s);
+        recover(_buildBuySeparator(_botId, msg.sender, _amount), _v, _r, _s);
         TradeParameters memory params;
         Bot storage bot = bots[_botId];
         require(bot.firstBuy == true, "First buy has not occurred");
@@ -425,21 +430,25 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
     function _buildFirstBuySeparator(
         bytes32 _botId,
+        address _sender,
         uint256 _amount
     ) public view returns (bytes32) {
         return
             _hashTypedDataV4(
-                keccak256(abi.encode(FIRSTBUY_TYPEHASH, _botId, _amount))
+                keccak256(
+                    abi.encode(FIRSTBUY_TYPEHASH, _botId, _sender, _amount)
+                )
             );
     }
 
     function _buildBuySeparator(
         bytes32 _botId,
+        address _sender,
         uint256 _amount
     ) public view returns (bytes32) {
         return
             _hashTypedDataV4(
-                keccak256(abi.encode(BUY_TYPEHASH, _botId, _amount))
+                keccak256(abi.encode(BUY_TYPEHASH, _botId, _sender, _amount))
             );
     }
 
