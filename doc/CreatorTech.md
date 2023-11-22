@@ -18,6 +18,14 @@ v0.1.1
 - **Contract Address on Testnet (Goerli):** [0x6C131A2cF1502c08E6a9B289C6a510FfcE64Fbc7](https://goerli.etherscan.io/address/0x6C131A2cF1502c08E6a9B289C6a510FfcE64Fbc7)
 - **ABI:** You can obtain the ABI from [here](https://goerli.etherscan.io/address/0x6C131A2cF1502c08E6a9B289C6a510FfcE64Fbc7#code).
 
+v0.1.2
+
+- **Signer Private Key:**`99b07ead3e50245003d7c1c6e5ac5fcc5ac15fd2ddfda22a6a4f423b90e61143`
+- **Signer Address:**`0x55B0023B2f59881f7125f183953a61ee3069833c`
+- **Contract Address on Mainnet (Ethereum):**
+- **Contract Address on Testnet (Goerli):** [0x948f0dDAC89Ea32d8F863CaB5a1A097c62dfb21C](https://goerli.etherscan.io/address/0x948f0dDAC89Ea32d8F863CaB5a1A097c62dfb21C)
+- **ABI:** You can obtain the ABI from [here](https://goerli.etherscan.io/address/0x948f0dDAC89Ea32d8F863CaB5a1A097c62dfb21C#code).
+
 ## Read-Only Functions
 
 - `getBotTotalSupply(bytes32 _botId)`: Returns the total supply of keys for a given bot ID.
