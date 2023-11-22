@@ -20,7 +20,14 @@ v0.1.1
 
 ## Read-Only Functions
 
+- `getBotTotalSupply(bytes32 _botId)`: Returns the total supply of keys for a given bot ID.
+
+- `getBotUnclaimedFees(bytes32 _botId)`: Returns the unclaimed fees for a given bot ID.
+
+- `getBotFirstBuy(bytes32 _botId)`: Returns a boolean indicating whether the first buy has occurred for the given bot ID.
+
 - `getBotCreatorAddr(bytes32 _botId)`: Returns the creator's address associated with the given bot ID.
+
 - `getBotBalanceOf(bytes32 _botId, address _account)`: Returns the balance of keys for a given bot ID and account.
 
 ## State-Changing Functions (Transactions)
