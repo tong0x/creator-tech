@@ -24,6 +24,7 @@ contract CTTradeTest is TestHelper {
         uint256 balanceBefore = DEV.balance;
         bytes32 signedHash = creatorTech._buildFirstBuySeparator(
             botId,
+            address(this),
             firstBuyAmount
         );
         (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) = signData(
@@ -32,12 +33,8 @@ contract CTTradeTest is TestHelper {
         creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
         uint256 keyPrice = creatorTech.getKeyPrice(0, firstBuyAmount + 1);
         uint256 protocolFees = (keyPrice * creatorTech.protocolFee()) / 1 ether;
-        uint256 creatorTreasuryFees = (keyPrice *
-            creatorTech.buyTreasuryFee()) / 1 ether;
         // uint256 creatorFees = (keyPrice * creatorTech.creatorFee()) / 1 ether;
-        uint256 balanceAfter = balanceBefore +
-            protocolFees +
-            creatorTreasuryFees;
+        uint256 balanceAfter = balanceBefore + protocolFees;
         assertEq(DEV.balance, balanceAfter);
     }
 
@@ -50,7 +47,11 @@ contract CTTradeTest is TestHelper {
             signedHash
         );
         creatorTech.bindCreatorAndClaim(botId, creatorAddr, v, r, s);
-        signedHash = creatorTech._buildFirstBuySeparator(botId, firstBuyAmount);
+        signedHash = creatorTech._buildFirstBuySeparator(
+            botId,
+            address(this),
+            firstBuyAmount
+        );
         (v, r, s) = signData(signedHash);
         creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
         (, address getCreatorAddr, , ) = creatorTech.bots(botId);
@@ -60,6 +61,7 @@ contract CTTradeTest is TestHelper {
     function testBuyKey() public {
         bytes32 signedHash = creatorTech._buildFirstBuySeparator(
             botId,
+            address(this),
             firstBuyAmount
         );
         (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) = signData(
@@ -67,7 +69,7 @@ contract CTTradeTest is TestHelper {
         );
         creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
         vm.startPrank(ALICE);
-        signedHash = creatorTech._buildBuySeparator(botId, buyAmount);
+        signedHash = creatorTech._buildBuySeparator(botId, ALICE, buyAmount);
         (v, r, s) = signData(signedHash);
         creatorTech.buyKey{value: 1 ether}(botId, buyAmount, v, r, s);
         uint256 balanceOfBuyer = creatorTech.getBotBalanceOf(
@@ -81,13 +83,14 @@ contract CTTradeTest is TestHelper {
     function testSellKey() public {
         bytes32 signedHash = creatorTech._buildFirstBuySeparator(
             botId,
+            address(this),
             firstBuyAmount
         );
         (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) = signData(
             signedHash
         );
         creatorTech.firstBuy{value: 1 ether}(botId, firstBuyAmount, v, r, s);
-        signedHash = creatorTech._buildBuySeparator(botId, buyAmount);
+        signedHash = creatorTech._buildBuySeparator(botId, ALICE, buyAmount);
         (v, r, s) = signData(signedHash);
         vm.startPrank(ALICE);
         creatorTech.buyKey{value: 1 ether}(botId, buyAmount, v, r, s);

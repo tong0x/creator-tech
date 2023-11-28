@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import "forge-std/Test.sol";
-import {CreatorTech} from "../src/CreatorTech.sol";
 import "./utils/TestHelper.sol";
 
 contract CTBindCreatorTest is TestHelper {
@@ -22,12 +20,14 @@ contract CTBindCreatorTest is TestHelper {
         address ctCreatorAddr = creatorTech.getBotCreatorAddr(botId);
         assertEq(ctCreatorAddr, ALICE);
         assertEq(ALICE.balance, 0);
+        assertEq(creatorTech.getBotBalanceOf(botId, ALICE), 0);
     }
 
     function testBindCreatorAndClaim_haveUnclaimedFees() public {
         uint256 firstBuyAmount = 3;
         bytes32 signedHash = creatorTech._buildFirstBuySeparator(
             botId,
+            address(this),
             firstBuyAmount
         );
         (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) = signData(
@@ -42,5 +42,8 @@ contract CTBindCreatorTest is TestHelper {
         creatorTech.bindCreatorAndClaim(botId, ALICE, v, r, s);
         assertGe(ALICE.balance, 0);
         assertEq(ALICE.balance, fee);
+        assertEq(creatorTech.getBotBalanceOf(botId, address(this)), 3);
+        assertEq(creatorTech.getBotBalanceOf(botId, ALICE), 1);
+        assertEq(creatorTech.getBotUnclaimedFees(botId), 0);
     }
 }

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {MerkleProof} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     // TODO: Add fields related to rewards
@@ -23,7 +24,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     struct TradeEvent {
-        uint256 eventIndex;
+        uint256 tradeIdx;
         uint256 timestamp;
         address trader;
         bytes32 bot;
@@ -36,30 +37,42 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
     }
 
     address public protocolFeeRecipient;
-    address public creatorTreasury;
 
     uint256 public protocolFee;
     uint256 public buyTreasuryFee;
     uint256 public buyCreatorFee;
     uint256 public sellTreasuryFee;
     uint256 public sellCreatorFee;
+    uint256 public totalReward;
     uint256 public tradeIndex;
+    uint256 public claimRewardIndex;
+    uint256 public claimFeeIndex;
     address[] public signers;
     mapping(bytes32 => Bot) public bots; // Bot ID => Bot Info
     mapping(address => bool) public isSigner;
     mapping(address => uint256) public signerIdx;
+    mapping(uint256 => bytes32) public roots; // Reward Distribution Index => Merkle Root
+    mapping(uint256 => mapping(address => bool)) hasClaimed; // Reward Distribution Index => Address => Has Claimed
 
     event SignerAdded(address indexed signer);
     event SignerRemoved(address indexed signer);
+    event ClaimReward(
+        uint256 indexed claimRewardIdx,
+        uint256 indexed rootId,
+        address indexed to,
+        uint256 amount,
+        uint256 totalRewardRemain,
+        uint256 timestamp
+    );
     event CreatorBound(
         bytes32 indexed creatorId,
         address creatorAddr,
         uint256 timestamp
     );
-    event RewardClaimed(
+    event ClaimCreatorFee(
         address indexed creatorAddr,
         uint256 timestamp,
-        uint256 claimIdx,
+        uint256 claimFeeIdx,
         uint256 amount
     );
     event Trade(TradeEvent tradeEvent);
@@ -72,7 +85,6 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         }
 
         protocolFeeRecipient = msg.sender;
-        creatorTreasury = msg.sender;
 
         protocolFee = 0.03 ether; // 3%
         buyTreasuryFee = 0.03 ether; // 3%
@@ -97,7 +109,12 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         bytes32[] calldata _r,
         bytes32[] calldata _s
     ) external payable nonReentrant {
-        recover(_buildFirstBuySeparator(_botId, _amount), _v, _r, _s);
+        recover(
+            _buildFirstBuySeparator(_botId, msg.sender, _amount),
+            _v,
+            _r,
+            _s
+        );
         Bot storage bot = bots[_botId];
         require(bot.firstBuy == false, "First buy already occurred");
         require(bot.totalSupply == 0, "Bot already initialized");
@@ -129,14 +146,11 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             value: params.protocolFee
         }(new bytes(0));
         require(params.success, "Unable to send funds");
-        (params.success, ) = creatorTreasury.call{value: params.treasuryFee}(
-            new bytes(0)
-        );
-        require(params.success, "Unable to send funds");
+        totalReward += params.treasuryFee;
 
         emit Trade(
             TradeEvent({
-                eventIndex: tradeIndex++,
+                tradeIdx: tradeIndex++,
                 timestamp: block.timestamp,
                 trader: msg.sender,
                 bot: _botId,
@@ -157,7 +171,7 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         bytes32[] calldata _r,
         bytes32[] calldata _s
     ) external payable nonReentrant {
-        recover(_buildBuySeparator(_botId, _amount), _v, _r, _s);
+        recover(_buildBuySeparator(_botId, msg.sender, _amount), _v, _r, _s);
         TradeParameters memory params;
         Bot storage bot = bots[_botId];
         require(bot.firstBuy == true, "First buy has not occurred");
@@ -186,14 +200,11 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             value: params.protocolFee
         }(new bytes(0));
         require(params.success, "Unable to send funds");
-        (params.success, ) = creatorTreasury.call{value: params.treasuryFee}(
-            new bytes(0)
-        );
-        require(params.success, "Unable to send funds");
+        totalReward += params.treasuryFee;
 
         emit Trade(
             TradeEvent({
-                eventIndex: tradeIndex++,
+                tradeIdx: tradeIndex++,
                 timestamp: block.timestamp,
                 trader: msg.sender,
                 bot: _botId,
@@ -237,14 +248,11 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             value: params.protocolFee
         }(new bytes(0));
         require(params.success, "Unable to send funds");
-        (params.success, ) = creatorTreasury.call{value: params.treasuryFee}(
-            new bytes(0)
-        );
-        require(params.success, "Unable to send funds");
+        totalReward += params.treasuryFee;
 
         emit Trade(
             TradeEvent({
-                eventIndex: tradeIndex++,
+                tradeIdx: tradeIndex++,
                 timestamp: block.timestamp,
                 trader: msg.sender,
                 bot: _botId,
@@ -255,6 +263,39 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
                 traderBalance: bot.balanceOf[msg.sender],
                 keySupply: bot.totalSupply
             })
+        );
+    }
+
+    function claimReward(
+        uint256 _rootId,
+        address _to,
+        uint256 _amount,
+        bytes32[] calldata _proof
+    ) external {
+        require(
+            !hasClaimed[_rootId][_to],
+            "Address has already claimed rewards"
+        );
+
+        bytes32 leaf = keccak256(abi.encodePacked(_to, _amount));
+        require(
+            MerkleProof.verify(_proof, roots[_rootId], leaf),
+            "Invalid Merkle proof"
+        );
+        require(totalReward >= _amount, "Insufficient rewards");
+        totalReward -= _amount;
+
+        hasClaimed[_rootId][_to] = true;
+        (bool success, ) = _to.call{value: _amount}(new bytes(0));
+        require(success, "Unable to send funds");
+
+        emit ClaimReward(
+            claimRewardIndex++,
+            _rootId,
+            _to,
+            _amount,
+            totalReward,
+            block.timestamp
         );
     }
 
@@ -314,10 +355,6 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
         protocolFeeRecipient = _protocolFeeRecipient;
     }
 
-    function setCreatorTreasury(address _creatorTreasury) external onlyOwner {
-        creatorTreasury = _creatorTreasury;
-    }
-
     function setProtocolFee(uint256 _protocolFee) external onlyOwner {
         protocolFee = _protocolFee;
     }
@@ -336,6 +373,10 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
     function setSellCreatorFee(uint256 _sellCreatorFee) external onlyOwner {
         sellCreatorFee = _sellCreatorFee;
+    }
+
+    function setMerkleRoot(uint256 _rootId, bytes32 _root) external onlyOwner {
+        roots[_rootId] = _root;
     }
 
     function _sumOfSquares(uint256 _n) internal pure returns (uint256) {
@@ -389,21 +430,25 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
 
     function _buildFirstBuySeparator(
         bytes32 _botId,
+        address _sender,
         uint256 _amount
     ) public view returns (bytes32) {
         return
             _hashTypedDataV4(
-                keccak256(abi.encode(FIRSTBUY_TYPEHASH, _botId, _amount))
+                keccak256(
+                    abi.encode(FIRSTBUY_TYPEHASH, _botId, _sender, _amount)
+                )
             );
     }
 
     function _buildBuySeparator(
         bytes32 _botId,
+        address _sender,
         uint256 _amount
     ) public view returns (bytes32) {
         return
             _hashTypedDataV4(
-                keccak256(abi.encode(BUY_TYPEHASH, _botId, _amount))
+                keccak256(abi.encode(BUY_TYPEHASH, _botId, _sender, _amount))
             );
     }
 
@@ -425,7 +470,12 @@ contract CreatorTech is Ownable, ReentrancyGuard, EIP712 {
             bot.unclaimedFees = 0;
             (bool success, ) = _creatorAddr.call{value: amount}("");
             require(success, "Transfer failed");
-            emit RewardClaimed(_creatorAddr, block.timestamp, 0, amount);
+            emit ClaimCreatorFee(
+                _creatorAddr,
+                block.timestamp,
+                claimFeeIndex++,
+                amount
+            );
         }
         if (bot.firstBuy) {
             bot.balanceOf[address(this)] -= 1;
